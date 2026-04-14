@@ -555,9 +555,9 @@ body {
   border-radius: var(--radius-md);
   padding: var(--spacing-md) var(--spacing-lg);
   display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
 }
 
 .field-group {
@@ -607,6 +607,22 @@ body {
 .terrain-grassy { background: rgba(120,200,80,0.15); border-color: var(--type-grass); color: var(--type-grass); }
 .terrain-psychic { background: rgba(248,88,136,0.15); border-color: var(--type-psychic); color: var(--type-psychic); }
 .terrain-misty { background: rgba(238,153,172,0.15); border-color: var(--type-fairy); color: var(--type-fairy); }
+.field-trick-room  { background: rgba(248,88,136,0.15);  border-color: var(--type-psychic); color: var(--type-psychic); }
+.field-tailwind    { background: rgba(152,192,248,0.15);  border-color: var(--type-flying);  color: var(--type-flying); }
+.field-light-screen{ background: rgba(78,154,241,0.15);   border-color: var(--accent-blue);  color: var(--accent-blue); }
+.field-reflect     { background: rgba(232,116,74,0.15);   border-color: var(--type-fire);    color: var(--type-fire); }
+.field-aurora-veil { background: rgba(192,144,240,0.15);  border-color: #c090f0;             color: #c090f0; }
+
+.field-badge-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.field-bar .field-group {
+  width: 100%;
+}
 
 /* 对战双方面板 */
 .battle-panels {

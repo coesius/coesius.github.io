@@ -66,7 +66,7 @@ function analyzeSpeed(mySpe, oppPokemon, oppKnownInfo = {}, myField = {}, trickR
   const deduped = {
     faster: pruneDominated(deduplicateByNatureItem(faster, 'min')),
     equal: deduplicateBySpeed(equal),
-    slower: deduplicateByNatureItem(slower, 'max')
+    slower: pruneDominated(deduplicateByNatureItem(slower, 'max'), 'slower')
   };
 
   return {
@@ -255,7 +255,12 @@ function deduplicateByNatureItem(configs, mode) {
  *   性格强度(A) ≤ 性格强度(B)，道具强度(A) ≤ 道具强度(B)，SP(A) ≤ SP(B)，且特性组相同
  * 则 B 被 A 支配（A 以更低条件就能超速，B 无需单独展示）
  */
-function pruneDominated(configs) {
+/**
+ * mode='faster': 若存在条件更弱的 A 仍能超速（A ≤ B 各维度），则 B 冗余
+ * mode='slower': 若存在条件更强的 A 仍被超速（A ≥ B 各维度），则 B 冗余
+ *   → slower 保留"即使对方满投资仍然更慢"的最有力说明
+ */
+function pruneDominated(configs, mode = 'faster') {
   const natRank = { reduce: 0, neutral: 1, boost: 2 };
   const itemRank = id => (id === 'choice-scarf' ? 1 : 0);
 
@@ -263,13 +268,24 @@ function pruneDominated(configs) {
     !configs.some(a => {
       if (a === b) return false;
       if ((a.abilityKey || 'none') !== (b.abilityKey || 'none')) return false;
-      const natOk  = natRank[a.natureKey]  <= natRank[b.natureKey];
-      const itemOk = itemRank(a.itemId) <= itemRank(b.itemId);
-      const spOk   = a.sp <= b.sp;
-      const anyStrict = natRank[a.natureKey] < natRank[b.natureKey] ||
-                        itemRank(a.itemId)   < itemRank(b.itemId)   ||
-                        a.sp < b.sp;
-      return natOk && itemOk && spOk && anyStrict;
+      const aNat  = natRank[a.natureKey],  bNat  = natRank[b.natureKey];
+      const aItem = itemRank(a.itemId),    bItem = itemRank(b.itemId);
+      const aSp   = a.sp,                  bSp   = b.sp;
+
+      let domNat, domItem, domSp;
+      if (mode === 'faster') {
+        // A 条件更弱或相等 → B 冗余
+        domNat  = aNat  <= bNat;
+        domItem = aItem <= bItem;
+        domSp   = aSp   <= bSp;
+      } else {
+        // A 条件更强或相等 → B 冗余
+        domNat  = aNat  >= bNat;
+        domItem = aItem >= bItem;
+        domSp   = aSp   >= bSp;
+      }
+      const anyStrict = aNat !== bNat || aItem !== bItem || aSp !== bSp;
+      return domNat && domItem && domSp && anyStrict;
     })
   );
 }

@@ -23,6 +23,7 @@ const AppState = {
     myStatus: null,        // 我方异常状态
     myRanks: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
     myTailwind: false,
+    myScreens: { lightScreen: false, reflect: false, auroraVeil: false },
 
     oppPokemonId: null,    // 对方宝可梦ID
     oppNature: '',         // 已知对方性格（空=未知）
@@ -30,6 +31,7 @@ const AppState = {
     oppStatus: null,
     oppRanks: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
     oppTailwind: false,
+    oppScreens: { lightScreen: false, reflect: false, auroraVeil: false },
 
     // 场地
     weather: 'none',
@@ -793,10 +795,49 @@ function updateStatusBadges(containerId, activeStatus) {
   });
 }
 
-function onFieldChange() {
-  AppState.battle.weather = document.getElementById('weather-select').value;
-  AppState.battle.terrain = document.getElementById('terrain-select').value;
-  AppState.battle.trickRoom = document.getElementById('trick-room-check').checked;
+function toggleWeather(value) {
+  AppState.battle.weather = AppState.battle.weather === value ? 'none' : value;
+  document.querySelectorAll('[data-weather]').forEach(b =>
+    b.classList.toggle('active', b.dataset.weather === AppState.battle.weather)
+  );
+  runAnalysis();
+}
+
+function toggleTerrain(value) {
+  AppState.battle.terrain = AppState.battle.terrain === value ? 'none' : value;
+  document.querySelectorAll('[data-terrain]').forEach(b =>
+    b.classList.toggle('active', b.dataset.terrain === AppState.battle.terrain)
+  );
+  runAnalysis();
+}
+
+function toggleTrickRoom() {
+  AppState.battle.trickRoom = !AppState.battle.trickRoom;
+  document.getElementById('trick-room-badge').classList.toggle('active', AppState.battle.trickRoom);
+  runAnalysis();
+}
+
+function toggleMyTailwind() {
+  AppState.battle.myTailwind = !AppState.battle.myTailwind;
+  document.getElementById('my-tailwind-badge').classList.toggle('active', AppState.battle.myTailwind);
+  runAnalysis();
+}
+
+function toggleOppTailwind() {
+  AppState.battle.oppTailwind = !AppState.battle.oppTailwind;
+  document.getElementById('opp-tailwind-badge').classList.toggle('active', AppState.battle.oppTailwind);
+  runAnalysis();
+}
+
+function toggleScreen(side, screen) {
+  const screens = AppState.battle[side === 'my' ? 'myScreens' : 'oppScreens'];
+  const newVal = !screens[screen];
+  screens[screen] = newVal;
+  // 同步徽章显示
+  ['lightScreen', 'reflect', 'auroraVeil'].forEach(s => {
+    const el = document.getElementById(`${side}-${s}-badge`);
+    if (el) el.classList.toggle('active', screens[s]);
+  });
   runAnalysis();
 }
 
@@ -825,7 +866,9 @@ function runAnalysis() {
   const field = {
     weather: AppState.battle.weather,
     terrain: AppState.battle.terrain,
-    trickRoom: AppState.battle.trickRoom
+    trickRoom: AppState.battle.trickRoom,
+    myScreens: AppState.battle.myScreens,
+    oppScreens: AppState.battle.oppScreens
   };
 
   // 计算我方属性
@@ -839,7 +882,7 @@ function runAnalysis() {
 
   // 我方有效速度（含道具/状态/rank）
   let myEffSpe = myStats.effective.spe;
-  if (AppState.battle.myTailwind || document.getElementById('my-tailwind')?.checked) {
+  if (AppState.battle.myTailwind) {
     myEffSpe = myEffSpe * 2;
   }
 
@@ -850,7 +893,7 @@ function runAnalysis() {
     item: document.getElementById('opp-item-select')?.value || '',
     ability: document.getElementById('opp-ability-select')?.value || '',
     pokemonAbilities: oppPokemon.abilities || [],
-    tailwind: !!(document.getElementById('opp-tailwind')?.checked || AppState.battle.oppTailwind),
+    tailwind: !!AppState.battle.oppTailwind,
     rank: oppSpeRank,
     weather: field.weather
   };

@@ -232,6 +232,12 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
         ? getItemDamageMult(attacker.item || 'none', moveData.category, moveData.type, typeEff)
         : 1;
 
+      // 对方场地光墙/反射壁/极光幕减伤（暴击无效，极光幕与另两者不叠加取其一）
+      const oppScreens = field.oppScreens || {};
+      const hasScreen = isPhys
+        ? (oppScreens.reflect || oppScreens.auroraVeil)
+        : (oppScreens.lightScreen || oppScreens.auroraVeil);
+
       const dmg = calcDamage({
         attackStat: atkStat,
         defenseStat: finalDefStat,
@@ -243,7 +249,7 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
         defTypes: defender.types,
         field,
         atkStatus,
-        modifiers: { itemMult }
+        modifiers: { itemMult, screen: !!hasScreen }
       });
 
       moveResults.push({ ...defCfg, ...dmg, hp: defHP });
@@ -317,6 +323,12 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
     for (const atkCfg of atkConfigs) {
       const oppAtkStat = calcStat(defBase, atkCfg.atkSP, atkCfg.natureMult);
 
+      // 我方场地光墙/反射壁/极光幕减伤（极光幕与另两者不叠加取其一）
+      const myScreens = field.myScreens || {};
+      const hasScreen = isPhys
+        ? (myScreens.reflect || myScreens.auroraVeil)
+        : (myScreens.lightScreen || myScreens.auroraVeil);
+
       const dmg = calcDamage({
         attackStat: oppAtkStat,
         defenseStat: myDefStat,
@@ -328,7 +340,7 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
         defTypes: defender.pokemon.types,
         field,
         atkStatus: {},
-        modifiers: {}
+        modifiers: { screen: !!hasScreen }
       });
 
       moveResults.push({ ...atkCfg, ...dmg });

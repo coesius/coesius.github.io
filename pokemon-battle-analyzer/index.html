@@ -52,30 +52,25 @@
     <div class="field-bar" id="field-bar">
       <div class="field-group">
         <span class="field-label">☁️ 天气</span>
-        <select class="field-select" id="weather-select" onchange="onFieldChange()">
-          <option value="none">无特殊天气</option>
-          <option value="sun">日照强烈</option>
-          <option value="rain">降雨</option>
-          <option value="sandstorm">沙暴</option>
-          <option value="hail">冰雹</option>
-        </select>
+        <div class="field-badge-row">
+          <span class="field-badge weather-sun"  data-weather="sun"       onclick="toggleWeather('sun')">☀️ 大晴天</span>
+          <span class="field-badge weather-rain" data-weather="rain"      onclick="toggleWeather('rain')">🌧️ 下雨</span>
+          <span class="field-badge weather-sand" data-weather="sandstorm" onclick="toggleWeather('sandstorm')">🌪️ 沙暴</span>
+          <span class="field-badge weather-hail" data-weather="hail"      onclick="toggleWeather('hail')">❄️ 下雪</span>
+        </div>
       </div>
       <div class="field-group">
         <span class="field-label">🌿 场地</span>
-        <select class="field-select" id="terrain-select" onchange="onFieldChange()">
-          <option value="none">无场地</option>
-          <option value="electric">电气场地</option>
-          <option value="grassy">草木场地</option>
-          <option value="psychic">心灵场地</option>
-          <option value="misty">薄雾场地</option>
-        </select>
+        <div class="field-badge-row">
+          <span class="field-badge terrain-electric" data-terrain="electric" onclick="toggleTerrain('electric')">⚡ 电气场地</span>
+          <span class="field-badge terrain-grassy"   data-terrain="grassy"   onclick="toggleTerrain('grassy')">🌿 草木场地</span>
+          <span class="field-badge terrain-psychic"  data-terrain="psychic"  onclick="toggleTerrain('psychic')">🔮 心灵场地</span>
+          <span class="field-badge terrain-misty"    data-terrain="misty"    onclick="toggleTerrain('misty')">🌫️ 薄雾场地</span>
+        </div>
       </div>
       <div class="field-group">
-        <span class="field-label">🔄 特殊</span>
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.85rem;">
-          <input type="checkbox" id="trick-room-check" onchange="onFieldChange()">
-          奇异空间
-        </label>
+        <span class="field-label">✨ 特殊</span>
+        <span class="field-badge field-trick-room" id="trick-room-badge" onclick="toggleTrickRoom()">🔀 戏法空间</span>
       </div>
     </div>
 
@@ -97,12 +92,15 @@
           <!-- 属性显示 -->
           <div id="my-stats-display" style="margin-bottom:var(--spacing-md)"></div>
 
-          <!-- 顺风 -->
+          <!-- 场地效果 -->
           <div class="form-group">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;">
-              <input type="checkbox" id="my-tailwind" onchange="runAnalysis()">
-              🌬️ 我方顺风（速度×2）
-            </label>
+            <label class="form-label">场地效果</label>
+            <div class="field-badge-row">
+              <span class="field-badge field-tailwind"     id="my-tailwind-badge"    onclick="toggleMyTailwind()">🌬️ 顺风</span>
+              <span class="field-badge field-light-screen" id="my-lightScreen-badge" onclick="toggleScreen('my','lightScreen')">🔵 光墙</span>
+              <span class="field-badge field-reflect"      id="my-reflect-badge"     onclick="toggleScreen('my','reflect')">🟠 反射壁</span>
+              <span class="field-badge field-aurora-veil"  id="my-auroraVeil-badge"  onclick="toggleScreen('my','auroraVeil')">🌈 极光幕</span>
+            </div>
           </div>
 
           <!-- 异常状态 -->
@@ -171,12 +169,15 @@
             </select>
           </div>
 
-          <!-- 顺风 -->
+          <!-- 场地效果 -->
           <div class="form-group">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;">
-              <input type="checkbox" id="opp-tailwind" onchange="runAnalysis()">
-              🌬️ 对方顺风（速度×2）
-            </label>
+            <label class="form-label">场地效果</label>
+            <div class="field-badge-row">
+              <span class="field-badge field-tailwind"     id="opp-tailwind-badge"    onclick="toggleOppTailwind()">🌬️ 顺风</span>
+              <span class="field-badge field-light-screen" id="opp-lightScreen-badge" onclick="toggleScreen('opp','lightScreen')">🔵 光墙</span>
+              <span class="field-badge field-reflect"      id="opp-reflect-badge"     onclick="toggleScreen('opp','reflect')">🟠 反射壁</span>
+              <span class="field-badge field-aurora-veil"  id="opp-auroraVeil-badge"  onclick="toggleScreen('opp','auroraVeil')">🌈 极光幕</span>
+            </div>
           </div>
 
           <!-- 异常状态 -->
