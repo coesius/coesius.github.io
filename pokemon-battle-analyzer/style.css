@@ -1,0 +1,1027 @@
+/* ========================================
+   宝可梦冠军对战分析工具 - 样式表
+   深色主题 + 宝可梦配色
+   ======================================== */
+
+:root {
+  /* 主色调 */
+  --bg-primary: #0f1117;
+  --bg-secondary: #1a1d27;
+  --bg-card: #1e2235;
+  --bg-card-hover: #252840;
+  --bg-input: #262a3e;
+  --bg-input-focus: #2e3350;
+
+  /* 文字 */
+  --text-primary: #e8eaf0;
+  --text-secondary: #9399b2;
+  --text-muted: #5c6281;
+
+  /* 强调色 */
+  --accent-blue: #4e9af1;
+  --accent-blue-dark: #2f77d4;
+  --accent-green: #56c48b;
+  --accent-red: #f06060;
+  --accent-yellow: #f0c040;
+  --accent-orange: #f08040;
+  --accent-purple: #a080f0;
+
+  /* 属性颜色 */
+  --type-normal: #9099a1;
+  --type-fire: #e8744a;
+  --type-water: #6890f0;
+  --type-electric: #f8d030;
+  --type-grass: #78c850;
+  --type-ice: #98d8d8;
+  --type-fighting: #c03028;
+  --type-poison: #a040a0;
+  --type-ground: #e0c068;
+  --type-flying: #a890f0;
+  --type-psychic: #f85888;
+  --type-bug: #a8b820;
+  --type-rock: #b8a038;
+  --type-ghost: #705898;
+  --type-dragon: #7038f8;
+  --type-dark: #705848;
+  --type-steel: #b8b8d0;
+  --type-fairy: #ee99ac;
+
+  /* 效果颜色 */
+  --effect-se2: #ff4500;   /* 4x 效果极佳 */
+  --effect-se: #ff8c00;    /* 2x 效果拔群 */
+  --effect-normal: #9399b2;/* 1x 普通 */
+  --effect-nve: #4a6fa5;   /* 0.5x 效果不好 */
+  --effect-nve2: #2d4a6b;  /* 0.25x 效果极差 */
+  --effect-immune: #333;   /* 0x 无效 */
+
+  /* 边框 */
+  --border-default: #2a2e45;
+  --border-focus: #4e9af1;
+  --border-card: #252840;
+
+  /* 间距 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { font-size: 14px; }
+
+body {
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ========== 滚动条 ========== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+/* ========== 顶部导航 ========== */
+.app-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-default);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-logo {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.app-logo span { font-size: 1.4rem; }
+
+.app-nav {
+  display: flex;
+  gap: var(--spacing-xs);
+  margin-left: var(--spacing-md);
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.nav-btn:hover { background: var(--bg-card); color: var(--text-primary); }
+.nav-btn.active { background: var(--bg-card); color: var(--accent-blue); }
+.nav-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 2px;
+  background: var(--accent-blue);
+  border-radius: 2px;
+}
+
+.header-right { margin-left: auto; display: flex; align-items: center; gap: var(--spacing-sm); }
+
+.team-select-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+/* ========== 通用表单元素 ========== */
+.form-input, .form-select, .form-textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.9rem;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+  outline: none;
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--border-focus);
+  background: var(--bg-input-focus);
+}
+
+.form-select { cursor: pointer; }
+.form-select option { background: var(--bg-card); }
+
+.form-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+  display: block;
+}
+
+.form-group { margin-bottom: var(--spacing-md); }
+
+/* 搜索框带下拉 */
+.search-wrapper {
+  position: relative;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.search-dropdown-item {
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.9rem;
+  transition: background 0.1s;
+}
+
+.search-dropdown-item:hover { background: var(--bg-card-hover); }
+.search-dropdown-item.selected { background: rgba(78, 154, 241, 0.15); }
+
+/* ========== 宝可梦搜索弹窗 ========== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  width: min(440px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-xs);
+}
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+.modal-close-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.pokemon-modal-list {
+  overflow-y: auto;
+  flex: 1;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+.pokemon-modal-list .search-dropdown-item { border-bottom: 1px solid var(--border-subtle); }
+.pokemon-modal-list .search-dropdown-item:last-child { border-bottom: none; }
+
+/* ========== 按钮 ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent-blue);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--accent-blue-dark); }
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+}
+.btn-secondary:hover { background: var(--bg-card-hover); }
+
+.btn-danger {
+  background: rgba(240, 96, 96, 0.15);
+  color: var(--accent-red);
+  border: 1px solid rgba(240, 96, 96, 0.3);
+}
+.btn-danger:hover { background: rgba(240, 96, 96, 0.25); }
+
+.btn-sm { padding: var(--spacing-xs) var(--spacing-sm); font-size: 0.8rem; }
+.btn-icon { padding: var(--spacing-xs); min-width: 28px; justify-content: center; }
+
+/* ========== 主内容区 ========== */
+.main-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--spacing-lg);
+}
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ========== 卡片 ========== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.card-title .icon { font-size: 1.1rem; }
+
+/* ========== 队伍配置页 ========== */
+.team-page-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.pokemon-slots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.pokemon-slot {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  position: relative;
+}
+
+.pokemon-slot.empty {
+  border-style: dashed;
+  opacity: 0.6;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  transition: all 0.15s;
+}
+
+.pokemon-slot.empty:hover {
+  opacity: 1;
+  border-color: var(--accent-blue);
+  background: rgba(78,154,241,0.05);
+}
+
+.slot-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+}
+
+.slot-num {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border-radius: 50%;
+  width: 24px; height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.slot-pokemon-name {
+  font-weight: 600;
+  font-size: 1rem;
+  flex: 1;
+}
+
+.slot-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: color 0.15s;
+}
+.slot-remove:hover { color: var(--accent-red); }
+
+/* SP分配面板 */
+.sp-allocator {
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.sp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.sp-remaining {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.sp-remaining.over { color: var(--accent-red); }
+.sp-remaining.ok { color: var(--accent-green); }
+
+.sp-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 50px 60px;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.sp-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.sp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+.sp-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-default);
+}
+
+.sp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; height: 18px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  cursor: grab;
+  transition: transform 0.1s;
+}
+
+.sp-slider:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.15);
+}
+
+.sp-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+.sp-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-default);
+}
+
+.sp-slider::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--accent-blue);
+  border: none;
+  cursor: grab;
+}
+
+.sp-slider:active::-moz-range-thumb {
+  cursor: grabbing;
+}
+
+.sp-value-input {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 2px var(--spacing-sm);
+  font-size: 0.85rem;
+  width: 48px;
+  text-align: center;
+}
+
+.sp-stat-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+/* 招式槽 */
+.moves-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-sm);
+}
+
+.move-slot {
+  position: relative;
+}
+
+.move-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ========== 对战分析页 ========== */
+.battle-page {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--spacing-md);
+}
+
+/* 场地状态条 */
+.field-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.field-group {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.field-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.field-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 4px var(--spacing-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.field-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  opacity: 0.5;
+}
+
+.field-badge.active { opacity: 1; }
+.field-badge:hover { opacity: 0.8; }
+
+.weather-sun { background: rgba(240,192,64,0.15); border-color: var(--accent-yellow); color: var(--accent-yellow); }
+.weather-rain { background: rgba(78,154,241,0.15); border-color: var(--accent-blue); color: var(--accent-blue); }
+.weather-sand { background: rgba(180,148,56,0.15); border-color: #b49438; color: #b49438; }
+.weather-hail { background: rgba(152,216,216,0.15); border-color: #98d8d8; color: #98d8d8; }
+.terrain-electric { background: rgba(248,208,48,0.15); border-color: var(--type-electric); color: var(--type-electric); }
+.terrain-grassy { background: rgba(120,200,80,0.15); border-color: var(--type-grass); color: var(--type-grass); }
+.terrain-psychic { background: rgba(248,88,136,0.15); border-color: var(--type-psychic); color: var(--type-psychic); }
+.terrain-misty { background: rgba(238,153,172,0.15); border-color: var(--type-fairy); color: var(--type-fairy); }
+
+/* 对战双方面板 */
+.battle-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+@media (max-width: 900px) {
+  .battle-panels { grid-template-columns: 1fr; }
+}
+
+.battle-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.battle-panel.my-panel { border-left: 3px solid var(--accent-blue); }
+.battle-panel.opp-panel { border-left: 3px solid var(--accent-red); }
+
+.panel-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pokemon-info-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+/* 属性Rank调整 */
+.rank-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+}
+
+.rank-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.rank-label { font-size: 0.7rem; color: var(--text-secondary); }
+
+.rank-display {
+  font-size: 0.9rem;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+}
+
+.rank-display.positive { color: var(--accent-green); }
+.rank-display.negative { color: var(--accent-red); }
+.rank-display.zero { color: var(--text-secondary); }
+
+.rank-btns { display: flex; gap: 4px; }
+
+.rank-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  border-radius: 4px;
+  width: 22px; height: 22px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.rank-btn:hover { background: var(--bg-card-hover); border-color: var(--accent-blue); }
+
+/* 异常状态 */
+.status-row {
+  display: flex;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap;
+}
+
+.status-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  opacity: 0.4;
+  transition: all 0.15s;
+}
+
+.status-badge.active { opacity: 1; }
+.status-badge:hover { opacity: 0.7; }
+.status-burn { background: rgba(232,116,74,0.15); border-color: var(--type-fire); color: var(--type-fire); }
+.status-poison { background: rgba(160,64,160,0.15); border-color: var(--type-poison); color: var(--type-poison); }
+.status-paralysis { background: rgba(248,208,48,0.15); border-color: var(--type-electric); color: var(--type-electric); }
+.status-sleep { background: rgba(144,153,162,0.15); border-color: var(--type-normal); color: var(--type-normal); }
+.status-freeze { background: rgba(152,216,216,0.15); border-color: var(--type-ice); color: var(--type-ice); }
+
+/* ========== 分析结果区 ========== */
+.analysis-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.section-icon { font-size: 1.1rem; }
+
+/* 速度分析 */
+.speed-summary {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.speed-stat {
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.speed-stat-label { font-size: 0.75rem; color: var(--text-secondary); }
+.speed-stat-value { font-size: 1.1rem; font-weight: 700; color: var(--accent-blue); }
+
+.speed-cases {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--spacing-sm);
+}
+
+.speed-case {
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-left: 3px solid;
+  font-size: 0.85rem;
+}
+
+.speed-case.faster { border-color: var(--accent-red); }
+.speed-case.slower { border-color: var(--accent-green); }
+.speed-case.equal { border-color: var(--accent-yellow); }
+
+.speed-case-value {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 2px;
+}
+
+.speed-case-label { color: var(--text-secondary); font-size: 0.78rem; }
+.speed-case-warn { font-size: 0.75rem; color: var(--accent-orange); margin-top: 2px; }
+
+/* 伤害计算表 */
+.damage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.damage-table th {
+  background: var(--bg-input);
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.damage-table td {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--border-default);
+  vertical-align: middle;
+}
+
+.damage-table tr:last-child td { border-bottom: none; }
+.damage-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+/* 伤害百分比着色 */
+.dmg-pct {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.dmg-pct.ko { color: var(--accent-red); }
+.dmg-pct.high { color: var(--accent-orange); }
+.dmg-pct.mid { color: var(--accent-yellow); }
+.dmg-pct.low { color: var(--accent-green); }
+
+/* KO标签 */
+.ko-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.ko-tag.guaranteed { background: var(--accent-red); color: #fff; }
+.ko-tag.possible { background: var(--accent-orange); color: #fff; }
+
+/* 属性类型徽章 */
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* 动态生成属性颜色：通过 JS 添加 class */
+.type-normal-bg { background: var(--type-normal); }
+.type-fire-bg { background: var(--type-fire); }
+.type-water-bg { background: var(--type-water); }
+.type-electric-bg { background: var(--type-electric); color: #333; }
+.type-grass-bg { background: var(--type-grass); }
+.type-ice-bg { background: var(--type-ice); color: #333; }
+.type-fighting-bg { background: var(--type-fighting); }
+.type-poison-bg { background: var(--type-poison); }
+.type-ground-bg { background: var(--type-ground); color: #333; }
+.type-flying-bg { background: var(--type-flying); }
+.type-psychic-bg { background: var(--type-psychic); }
+.type-bug-bg { background: var(--type-bug); }
+.type-rock-bg { background: var(--type-rock); }
+.type-ghost-bg { background: var(--type-ghost); }
+.type-dragon-bg { background: var(--type-dragon); }
+.type-dark-bg { background: var(--type-dark); }
+.type-steel-bg { background: var(--type-steel); color: #333; }
+.type-fairy-bg { background: var(--type-fairy); color: #333; }
+
+/* 分类徽章 */
+.cat-physical { background: rgba(232,116,74,0.2); color: var(--type-fire); border: 1px solid rgba(232,116,74,0.4); }
+.cat-special   { background: rgba(78,154,241,0.2); color: var(--accent-blue); border: 1px solid rgba(78,154,241,0.4); }
+.cat-status    { background: rgba(144,153,162,0.2); color: var(--type-normal); border: 1px solid rgba(144,153,162,0.4); }
+
+/* 效果倍率颜色 */
+.eff-4x { color: var(--effect-se2); font-weight: 800; }
+.eff-2x { color: var(--effect-se); font-weight: 700; }
+.eff-1x { color: var(--text-secondary); }
+.eff-05x { color: var(--effect-nve); }
+.eff-025x { color: var(--effect-nve2); }
+.eff-0x { color: var(--text-muted); }
+
+/* ========== 威胁技能列表 ========== */
+.threat-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+
+.threat-item {
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-md);
+  border-left: 3px solid var(--border-default);
+  transition: border-color 0.15s;
+}
+
+.threat-item.threat-ko { border-color: var(--accent-red); background: rgba(240,96,96,0.05); }
+.threat-item.threat-high { border-color: var(--accent-orange); }
+.threat-item.threat-mid { border-color: var(--accent-yellow); }
+.threat-item.threat-low { border-color: var(--border-default); }
+
+.threat-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.threat-move-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.threat-power { font-size: 0.8rem; color: var(--text-secondary); }
+
+.threat-dmg-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.threat-dmg-item {
+  background: var(--bg-card);
+  border-radius: 4px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: 0.8rem;
+}
+
+.threat-dmg-label { color: var(--text-secondary); font-size: 0.72rem; margin-bottom: 2px; }
+.threat-dmg-value { font-weight: 600; }
+
+/* ========== 空状态 ========== */
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--text-muted);
+}
+
+.empty-state .icon { font-size: 2.5rem; margin-bottom: var(--spacing-md); }
+.empty-state p { font-size: 0.9rem; }
+
+/* ========== Toast 提示 ========== */
+.toast-container {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  right: var(--spacing-lg);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.toast {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.9rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  animation: toastIn 0.2s ease;
+  max-width: 300px;
+}
+
+.toast.success { border-color: var(--accent-green); }
+.toast.error { border-color: var(--accent-red); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ========== 响应式 ========== */
+@media (max-width: 768px) {
+  .main-content { padding: var(--spacing-md); }
+  .pokemon-slots { grid-template-columns: 1fr; }
+  .moves-grid { grid-template-columns: 1fr; }
+  .field-bar { gap: var(--spacing-sm); }
+  .damage-table { font-size: 0.8rem; }
+  .damage-table th, .damage-table td { padding: var(--spacing-xs) var(--spacing-sm); }
+  .threat-dmg-grid { grid-template-columns: 1fr; }
+}
+
+/* ========== 折叠面板 ========== */
+.collapsible-toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: var(--spacing-xs);
+  transition: color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.collapsible-toggle:hover { color: var(--text-primary); }
+
+.collapsible-content.collapsed { display: none; }
+
+/* ========== 宝可梦属性显示 ========== */
+.stat-bar-row {
+  display: grid;
+  grid-template-columns: 48px 36px 1fr 36px;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+}
+
+.stat-bar-name { color: var(--text-secondary); text-align: right; }
+.stat-bar-base { color: var(--text-primary); font-weight: 600; text-align: right; }
+
+.stat-bar-bg {
+  height: 6px;
+  background: var(--border-default);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent-blue);
+  transition: width 0.3s;
+}
+
+.stat-bar-final { color: var(--accent-green); font-weight: 700; }

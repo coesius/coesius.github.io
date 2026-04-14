@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:pokebase.app)",
+      "WebSearch",
+      "WebFetch(domain:www.championslab.xyz)",
+      "WebFetch(domain:game8.co)",
+      "WebFetch(domain:www.gamer.org)",
+      "WebFetch(domain:bulbapedia.bulbagarden.net)",
+      "WebFetch(domain:screenrant.com)",
+      "WebFetch(domain:nerd-of-now.github.io)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\coesi\\\\pokemon-battle-analyzer\\\\data\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\coesi\\\\pokemon-battle-analyzer\\\\calc\")",
+      "Read(//c/tmp/**)",
+      "Bash(cat)",
+      "Bash(python3 check_moves.py)",
+      "Bash(python3)",
+      "Read(//mnt/c/Users/coesi/pokemon-battle-analyzer/data/**)",
+      "Bash(python /tmp/extract_pokemon_moves.py)",
+      "Bash(node data/convert_pokemon.js)",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"require\\(''''pinyin-pro''''\\)\")",
+      "Bash(npm install:*)"
+    ]
+  }
+}
