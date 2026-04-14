@@ -391,15 +391,41 @@ function renderSPRows(slotIndex, pokemon, slot) {
   }).join('');
 }
 
+const TYPE_ORDER = [
+  'normal','fire','water','electric','grass','ice',
+  'fighting','poison','ground','flying','psychic','bug',
+  'rock','ghost','dragon','dark','steel','fairy'
+];
+
+const CATEGORY_LABEL = { physical: '物理', special: '特殊', status: '变化' };
+
 function renderMoveSlot(slotIndex, moveIndex, moveId, pokemon) {
   const moveData = moveId ? MOVES[moveId] : null;
-  const moveOptions = (pokemon.moves || [])
-    .filter(id => MOVES[id])
-    .map(id => {
-      const m = MOVES[id];
-      return `<option value="${id}" ${moveId === id ? 'selected' : ''}>
-        ${m.name}${m.category !== 'status' ? ` [${m.power}]` : ' [变化]'}
-      </option>`;
+
+  // 按属性分组
+  const byType = {};
+  (pokemon.moves || []).filter(id => MOVES[id]).forEach(id => {
+    const t = MOVES[id].type;
+    if (!byType[t]) byType[t] = [];
+    byType[t].push(id);
+  });
+
+  // 按 TYPE_ORDER 排序属性，组内按威力降序（变化招式排最后）
+  const groups = TYPE_ORDER
+    .filter(t => byType[t])
+    .map(t => {
+      const sorted = byType[t].slice().sort((a, b) => {
+        const pa = MOVES[a].power || 0, pb = MOVES[b].power || 0;
+        return pb - pa;
+      });
+      const typeName = TYPE_NAMES[t] || t;
+      const opts = sorted.map(id => {
+        const m = MOVES[id];
+        const power = m.power ? `${m.power}` : '变化';
+        const cat = CATEGORY_LABEL[m.category] || '';
+        return `<option value="${id}" ${moveId === id ? 'selected' : ''}>${m.name}  [${cat} ${power}]</option>`;
+      }).join('');
+      return `<optgroup label="${typeName}">${opts}</optgroup>`;
     });
 
   return `
@@ -407,7 +433,7 @@ function renderMoveSlot(slotIndex, moveIndex, moveId, pokemon) {
       <select class="form-select" style="font-size:0.82rem"
         onchange="updateMove(${slotIndex}, ${moveIndex}, this.value)">
         <option value="">— 选择招式 —</option>
-        ${moveOptions.join('')}
+        ${groups.join('')}
       </select>
       ${moveData ? `
         <div style="margin-top:4px;display:flex;gap:4px;align-items:center;">

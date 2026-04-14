@@ -1,0 +1,239 @@
+	Items	Effect	Location	VP
+Black Belt
+Black Belt	Boosts the power of the holder's Fighting-type moves	Shop	700
+Black Glasses
+Black Glasses	Boosts the power of the holder's Dark-type moves	Shop	700
+Bright Powder
+Bright Powder	Lowers the accuracy of opposing Pokemon's moves	Beginning	-
+Charcoal
+Charcoal	Boosts the power of the holder's Fire-type moves	Shop	700
+Choice Scarf
+Choice Scarf	Boosts the holder's Speed stat but only allows single move use	Beginning	-
+Dragon Fang
+Dragon Fang	Boosts the power of the holder's Dragon-type moves	Shop	700
+Fairy Feather
+Fairy Feather	Boosts the power of the holder's Fairy-type moves	Shop	700
+Focus Band
+Focus Band	May endure with 1 HP when hit by knockout move	Beginning	-
+Focus Sash
+Focus Sash	Endures with 1 HP if holding full health (once only)	Beginning	-
+Hard Stone
+Hard Stone	Boosts the power of the holder's Rock-type moves	Shop	700
+King's Rock
+King's Rock	May cause target to flinch on successful attack	Beginning	-
+Leftovers
+Leftovers	Slowly restores the holder's HP	Beginning	-
+Light Ball
+Light Ball	Boosts Pikachu's Attack and Sp. Atk stats	Shop	1,000
+Magnet
+Magnet	Boosts the power of the holder's Electric-type moves	Shop	700
+Mental Herb
+Mental Herb	Shakes off move-binding effects (once only)	Shop	1,000
+Metal Coat
+Metal Coat	Boosts the power of the holder's Steel-type moves	Shop	700
+Miracle Seed
+Miracle Seed	Boosts the power of the holder's Grass-type moves	Shop	700
+Mystic Water
+Mystic Water	Boosts the power of the holder's Water-type moves	Shop	700
+Never-Melt Ice
+Never-Melt Ice	Boosts the power of the holder's Ice-type moves	Shop	700
+Poison Barb
+Poison Barb	Boosts the power of the holder's Poison-type moves	Shop	700
+Quick Claw
+Quick Claw	Lets holder occasionally unleash move faster	Beginning	-
+Scope Lens
+Scope Lens	Boosts the holder's critical-hit ratio	Shop	1,000
+Sharp Beak
+Sharp Beak	Boosts the power of the holder's Flying-type moves	Shop	700
+Shell Bell
+Shell Bell	Restores little HP whenever holder inflicts damage	Shop	700
+Silk Scarf
+Silk Scarf	Boosts the power of the holder's Normal-type moves	Shop	700
+Silver Powder
+Silver Powder	Boosts the power of the holder's Bug-type moves	Shop	700
+Soft Sand
+Soft Sand	Boosts the power of the holder's Ground-type moves	Shop	700
+Spell Tag
+Spell Tag	Boosts the power of the holder's Ghost-type moves	Shop	700
+Twisted Spoon
+Twisted Spoon	Boosts the power of the holder's Psychic-type moves	Shop	700
+White Herb
+White Herb	Restores any lowered stat in battle (once only)	Beginning	-
+Mega Stones (59)
+Items	Effect	Location	VP
+Abomasite
+Abomasite	Allows Abomasnow to Mega Evolve	Mega Evolution Tutorial	-
+Absolite
+Absolite	Allows Absol to Mega Evolve	Shop	2,000
+Aerodactylite
+Aerodactylite	Allows Aerodactyl to Mega Evolve	Shop	2,000
+Aggronite
+Aggronite	Allows Aggron to Mega Evolve	Mega Evolution Tutorial	-
+Alakazite
+Alakazite	Allows Alakazam to Mega Evolve	Shop	2,000
+Altarianite
+Altarianite	Allows Altaria to Mega Evolve	Shop	2,000
+Ampharosite
+Ampharosite	Allows Ampharos to Mega Evolve	Shop	2,000
+Audinite
+Audinite	Allows Audino to Mega Evolve	Shop	2,000
+Banettite
+Banettite	Allows Banette to Mega Evolve	Shop	2,000
+Beedrillite
+Beedrillite	Allows Beedrill to Mega Evolve	Mega Evolution Tutorial	-
+Blastoisinite
+Blastoisinite	Allows Blastoise to Mega Evolve	Shop	2,000
+Cameruptite
+Cameruptite	Allows Camerupt to Mega Evolve	Shop	2,000
+Chandelurite
+Chandelurite	Allows Chandelure to Mega Evolve	Shop	2,000
+Charizardite X
+Charizardite X	Allows Charizard to Mega Evolve	Shop	2,000
+Charizardite Y
+Charizardite Y	Allows Charizard to Mega Evolve	Shop	2,000
+Chesnaughtite
+Chesnaughtite	Allows Chesnaught to Mega Evolve	Deposit Chesnaught from Pokemon Legends: Z-A	-
+Chimechite
+Chimechite	Allows Chimecho to Mega Evolve	Shop	2,000
+Clefablite
+Clefablite	Allows Clefable to Mega Evolve	Shop	2,000
+Crabominite
+Crabominite	Allows Crabominable to Mega Evolve	Shop	2,000
+Delphoxite
+Delphoxite	Allows Delphox to Mega Evolve	Deposit Delphox from Pokemon Legends: Z-A	-
+Dragoninite
+Dragoninite	Allows Dragonite to Mega Evolve	Shop	2,000
+Drampanite
+Drampanite	Allows Drampa to Mega Evolve	Shop	2,000
+Emboarite
+Emboarite	Allows Emboar to Mega Evolve	Shop	2,000
+Excadrite
+Excadrite	Allows Excadrill to Mega Evolve	Shop	2,000
+Feraligite
+Feraligite	Allows Feraligatr to Mega Evolve	Shop	2,000
+Floettite
+Floettite	Allows special Floette to Mega Evolve	Deposit Floette Eternal Flower from Pokemon Legends: Z-A	-
+Froslassite
+Froslassite	Allows Froslass to Mega Evolve	Shop	2,000
+Galladite
+Galladite	Allows Gallade to Mega Evolve	Shop	2,000
+Garchompite
+Garchompite	Allows Garchomp to Mega Evolve	Mega Evolution Tutorial	-
+Gardevoirite
+Gardevoirite	Allows Gardevoir to Mega Evolve	Shop	2,000
+Gengarite
+Gengarite	Allows Gengar to Mega Evolve	Shop	2,000
+Glalitite
+Glalitite	Allows Glalie to Mega Evolve	Shop	2,000
+Glimmoranite
+Glimmoranite	Allows Glimmora to Mega Evolve	Shop	2,000
+Golurkite
+Golurkite	Allows Golurk to Mega Evolve	Shop	2,000
+Greninjite
+Greninjite	Allows Greninja to Mega Evolve	Deposit Greninja from Pokemon Legends: Z-A	-
+Gyaradosite
+Gyaradosite	Allows Gyarados to Mega Evolve	Mega Evolution Tutorial	-
+Hawluchanite
+Hawluchanite	Allows Hawlucha to Mega Evolve	Shop	2,000
+Heracronite
+Heracronite	Allows Heracross to Mega Evolve	Mega Evolution Tutorial	-
+Houndoominite
+Houndoominite	Allows Houndoom to Mega Evolve	Shop	2,000
+Kangaskhanite
+Kangaskhanite	Allows Kangaskhan to Mega Evolve	Shop	2,000
+Lopunnite
+Lopunnite	Allows Lopunny to Mega Evolve	Shop	2,000
+Lucarionite
+Lucarionite	Allows Lucario to Mega Evolve	Shop	2,000
+Manectite
+Manectite	Allows Manectric to Mega Evolve	Mega Evolution Tutorial	-
+Medichamite
+Medichamite	Allows Medicham to Mega Evolve	Shop	2,000
+Meganiumite
+Meganiumite	Allows Meganium to Mega Evolve	Shop	2,000
+Meowsticite
+Meowsticite	Allows Meowstic to Mega Evolve	Shop	2,000
+Pidgeotite
+Pidgeotite	Allows Pidgeot to Mega Evolve	Shop	2,000
+Pinsirite
+Pinsirite	Allows Pinsir to Mega Evolve	Shop	2,000
+Sablenite
+Sablenite	Allows Sableye to Mega Evolve	Shop	2,000
+Scizorite
+Scizorite	Allows Scizor to Mega Evolve	Shop	2,000
+Scovillainite
+Scovillainite	Allows Scovillain to Mega Evolve	Shop	2,000
+Sharpedonite
+Sharpedonite	Allows Sharpedo to Mega Evolve	Shop	2,000
+Skarmorite
+Skarmorite	Allows Skarmory to Mega Evolve	Shop	2,000
+Slowbronite
+Slowbronite	Allows Slowbro to Mega Evolve (not Galarian)	Shop	2,000
+Starminite
+Starminite	Allows Starmie to Mega Evolve	Shop	2,000
+Steelixite
+Steelixite	Allows Steelix to Mega Evolve	Mega Evolution Tutorial	-
+Tyranitarite
+Tyranitarite	Allows Tyranitar to Mega Evolve	Shop	2,000
+Venusaurite
+Venusaurite	Allows Venusaur to Mega Evolve	Shop	2,000
+Victreebelite
+Victreebelite	Allows Victreebel to Mega Evolve	Shop	2,000
+Berries (28)
+Items	Effect	Location	VP
+Aspear Berry
+Aspear Berry	Allows Pokemon to thaw after being frozen	Shop	400
+Babiri Berry
+Babiri Berry	Weakens supereffective Steel-type move damage	Shop	400
+Charti Berry
+Charti Berry	Weakens supereffective Rock-type move damage	Shop	400
+Cheri Berry
+Cheri Berry	Allows Pokemon to free itself from paralysis	Shop	400
+Chesto Berry
+Chesto Berry	Allows Pokemon to shake off drowsiness	Shop	400
+Chilan Berry
+Chilan Berry	Weakens Normal-type move damage	Shop	400
+Chople Berry
+Chople Berry	Weakens supereffective Fighting-type damage	Shop	400
+Coba Berry
+Coba Berry	Weakens supereffective Flying-type damage	Shop	400
+Colbur Berry
+Colbur Berry	Weakens supereffective Dark-type move damage	Shop	400
+Haban Berry
+Haban Berry	Weakens supereffective Dragon-type damage	Shop	400
+Kasib Berry
+Kasib Berry	Weakens supereffective Ghost-type move damage	Shop	400
+Kebia Berry
+Kebia Berry	Weakens supereffective Poison-type damage	Shop	400
+Leppa Berry
+Leppa Berry	Restores 10 PP to a move	Shop	400
+Lum Berry
+Lum Berry	Cures any status condition Pokemon has	Beginning	-
+Occa Berry
+Occa Berry	Weakens supereffective Fire-type move damage	Shop	400
+Oran Berry
+Oran Berry	Restores 10 HP to itself	Shop	400
+Passho Berry
+Passho Berry	Weakens supereffective Water-type damage	Shop	400
+Payapa Berry
+Payapa Berry	Weakens supereffective Psychic-type damage	Shop	400
+Pecha Berry
+Pecha Berry	Lifts effects of being poisoned	Shop	400
+Persim Berry
+Persim Berry	Allows Pokemon to cure itself of confusion	Shop	400
+Rawst Berry
+Rawst Berry	Allows Pokemon to cure itself of a burn	Shop	400
+Rindo Berry
+Rindo Berry	Weakens supereffective Grass-type damage	Shop	400
+Roseli Berry
+Roseli Berry	Weakens supereffective Fairy-type move damage	Shop	400
+Shuca Berry
+Shuca Berry	Weakens supereffective Ground-type damage	Shop	400
+Sitrus Berry
+Sitrus Berry	Restores small amount of HP to itself	Beginning	-
+Tanga Berry
+Tanga Berry	Weakens supereffective Bug-type move damage	Shop	400
+Wacan Berry
+Wacan Berry	Weakens supereffective Electric-type damage	Shop	400
+Yache Berry
+Yache Berry	Weakens supereffective Ice-type move damage	Shop	400
