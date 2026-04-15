@@ -43,17 +43,19 @@ function calcDamage(params) {
     return { min: 0, max: 0, minPct: 0, maxPct: 0, typeEff: 1, note: '变化技无伤害' };
   }
 
-  // 属性相克
-  const typeEff = (typeof getTypeEffectiveness === 'function')
-    ? getTypeEffectiveness(moveType, defTypes)
-    : 1;
+  // 属性相克（允许外部传入覆盖值，用于冷冻干燥等特殊技能）
+  const typeEff = modifiers.typeEffOverride !== undefined
+    ? modifiers.typeEffOverride
+    : ((typeof getTypeEffectiveness === 'function') ? getTypeEffectiveness(moveType, defTypes) : 1);
 
   if (typeEff === 0) {
     return { min: 0, max: 0, minPct: 0, maxPct: 0, typeEff: 0, note: '无效（免疫）' };
   }
 
-  // STAB
-  const stab = atkTypes.includes(moveType) ? 1.5 : 1.0;
+  // STAB（允许外部覆盖，用于适应力等特性）
+  const stab = modifiers.stabOverride !== undefined
+    ? modifiers.stabOverride
+    : (atkTypes.includes(moveType) ? 1.5 : 1.0);
 
   // 基础伤害（不含随机数）
   const baseDmg = Math.floor(Math.floor(22 * power * attackStat / defenseStat) / 50) + 2;
@@ -186,83 +188,152 @@ function buildDamageNote(typeEff, stab, weatherMult, terrainMult, burnMult, crit
  * @param {Object} atkStatus 我方状态
  * @returns {Array} 每个技能的三种情况伤害
  */
-function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = {}) {
+function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = {}, abilityInfo = {}) {
+  const myAbilityId  = abilityInfo.myAbility  || '';
+  const defAbilityId = abilityInfo.defAbility || '';
+  const defPossible  = abilityInfo.defPossibleAbilities || [];
+
   const results = [];
 
   // 对方三种防御配置
   const defConfigs = [
-    { label: '无投资（最低防御）', hpSP: 0, defSP: 0, natureMult: 1.0 },
-    { label: '满HP+满防御', hpSP: 32, defSP: 32, natureMult: 1.0 },
-    { label: '满HP+满防御+性格加成', hpSP: 32, defSP: 32, natureMult: 1.1 }
+    { label: '无投资（最低防御）',     hpSP: 0,  defSP: 0,  natureMult: 1.0 },
+    { label: '满HP+满防御',           hpSP: 32, defSP: 32, natureMult: 1.0 },
+    { label: '满HP+满防御+性格加成',  hpSP: 32, defSP: 32, natureMult: 1.1 }
   ];
 
-  for (const move of myMoves) {
-    if (!move || !MOVES[move]) continue;
-    const moveData = MOVES[move];
+  for (const moveId of myMoves) {
+    if (!moveId || !MOVES[moveId]) continue;
+    const moveData = MOVES[moveId];
     if (moveData.category === 'status') continue;
 
-    const isPhys = moveData.category === 'physical';
-    const atkStat = isPhys ? attacker.stats.effective.atk : attacker.stats.effective.spa;
-    const atkBase = isPhys ? attacker.pokemon.baseStats.atk : attacker.pokemon.baseStats.spa;
+    // ── 1. 特殊技能场地联动（气象球/地形脉冲/日光束等）
+    const specialEff = (typeof applySpecialMoveEffects === 'function')
+      ? applySpecialMoveEffects(moveId, field) : {};
 
-    const moveResults = [];
-    for (const defCfg of defConfigs) {
-      // 计算对方防御值
+    let effectMoveType = specialEff.newType  || moveData.type;
+    let effectPower    = specialEff.newPower || moveData.power;
+
+    // ── 2. 技能标签
+    const flags = (typeof getMoveFlags === 'function')
+      ? getMoveFlags(moveId, { ...moveData, type: effectMoveType, power: effectPower })
+      : {};
+
+    // ── 3. 攻击方特性效果（我方）
+    const atkAbilEff = (myAbilityId && typeof getAtkAbilityEffect === 'function')
+      ? getAtkAbilityEffect(myAbilityId, moveId,
+          { ...moveData, type: effectMoveType, power: effectPower },
+          flags, attacker.pokemon.types, field)
+      : {};
+
+    if (atkAbilEff.newType)  effectMoveType = atkAbilEff.newType;
+    if (atkAbilEff.powerMult && atkAbilEff.powerMult !== 1)
+      effectPower = Math.floor(effectPower * atkAbilEff.powerMult);
+
+    const isPhys  = moveData.category === 'physical';
+    let   atkStat = isPhys ? attacker.stats.effective.atk : attacker.stats.effective.spa;
+    if (atkAbilEff.atkStatMult) atkStat = Math.floor(atkStat * atkAbilEff.atkStatMult);
+
+    // ── 4. 基础属性相克（用于 filter/solid-rock 判断）
+    const baseTypeEff = (typeof getTypeEffectiveness === 'function')
+      ? getTypeEffectiveness(effectMoveType, defender.types) : 1;
+
+    // 冷冻干燥对水属性固定超效
+    let typeEffOverride;
+    if (moveId === 'freeze-dry' && defender.types.includes('water')) {
+      typeEffOverride = Math.max(baseTypeEff, 2);
+    }
+
+    // ── 5. 单配置伤害计算函数（含防御方特性）
+    const computeDmg = (defCfg, defAbilEff) => {
+      if (defAbilEff && defAbilEff.immune) {
+        const defHP = calcHP(defender.baseStats.hp, defCfg.hpSP);
+        return { ...defCfg, min: 0, max: 0, minPct: 0, maxPct: 0,
+                 typeEff: 0, note: defAbilEff.note || '免疫', hp: defHP };
+      }
+
       const defBase = isPhys ? defender.baseStats.def : defender.baseStats.spd;
-      const defHP_base = defender.baseStats.hp;
-
       const defStat = calcStat(defBase, defCfg.defSP, defCfg.natureMult);
-      const defHP = calcHP(defHP_base, defCfg.hpSP);
+      const defHP   = calcHP(defender.baseStats.hp, defCfg.hpSP);
 
-      // 沙暴特殊：岩石系特防×1.5
       let finalDefStat = defStat;
-      if (!isPhys && field.weather === 'sandstorm' && defender.types.includes('rock')) {
+      if (!isPhys && field.weather === 'sandstorm' && defender.types.includes('rock'))
         finalDefStat = Math.floor(finalDefStat * 1.5);
-      }
-      // 冰雹：冰系防御×1.5（Generation IX新增）
-      if (isPhys && field.weather === 'hail' && defender.types.includes('ice')) {
+      if (isPhys && field.weather === 'hail' && defender.types.includes('ice'))
         finalDefStat = Math.floor(finalDefStat * 1.5);
-      }
 
-      // 道具对伤害的修正
-      const typeEff = (typeof getTypeEffectiveness === 'function')
-        ? getTypeEffectiveness(moveData.type, defender.types)
-        : 1;
-      const itemMult = (typeof getItemDamageMult === 'function')
-        ? getItemDamageMult(attacker.item || 'none', moveData.category, moveData.type, typeEff)
-        : 1;
+      const effTypeEff = typeEffOverride !== undefined ? typeEffOverride : baseTypeEff;
+      const itemMult   = (typeof getItemDamageMult === 'function')
+        ? getItemDamageMult(attacker.item || 'none', moveData.category, effectMoveType, effTypeEff) : 1;
 
-      // 对方场地光墙/反射壁/极光幕减伤（暴击无效，极光幕与另两者不叠加取其一）
       const oppScreens = field.oppScreens || {};
-      const hasScreen = isPhys
+      const hasScreen  = isPhys
         ? (oppScreens.reflect || oppScreens.auroraVeil)
         : (oppScreens.lightScreen || oppScreens.auroraVeil);
 
+      const abilMult = (defAbilEff && defAbilEff.mult) ? defAbilEff.mult : 1;
+
       const dmg = calcDamage({
-        attackStat: atkStat,
+        attackStat:  atkStat,
         defenseStat: finalDefStat,
-        defenderHP: defHP,
-        power: moveData.power,
-        moveType: moveData.type,
-        category: moveData.category,
-        atkTypes: attacker.pokemon.types,
-        defTypes: defender.types,
+        defenderHP:  defHP,
+        power:       effectPower,
+        moveType:    effectMoveType,
+        category:    moveData.category,
+        atkTypes:    attacker.pokemon.types,
+        defTypes:    defender.types,
         field,
         atkStatus,
-        modifiers: { itemMult, screen: !!hasScreen }
+        modifiers: {
+          itemMult,
+          screen:          !!hasScreen,
+          stabOverride:    atkAbilEff.stabOverride,
+          abilityMult:     abilMult,
+          typeEffOverride: typeEffOverride
+        }
       });
 
-      moveResults.push({ ...defCfg, ...dmg, hp: defHP });
+      // 合并说明文本
+      const noteArr = [specialEff.note, atkAbilEff.note,
+                       defAbilEff && defAbilEff.note, dmg.note].filter(Boolean);
+      return { ...defCfg, ...dmg, hp: defHP, note: noteArr.join(' / ') || undefined };
+    };
+
+    // ── 6. 主结果（已知或无特性）
+    const knownDefAbilEff = (defAbilityId && typeof getDefAbilityEffect === 'function')
+      ? getDefAbilityEffect(defAbilityId, effectMoveType, moveData.category, moveId, flags, baseTypeEff)
+      : {};
+
+    const moveResults = defConfigs.map(cfg => computeDmg(cfg, knownDefAbilEff));
+
+    // ── 7. 特性未知时，枚举有影响的特性形成情景
+    let scenarios = [];
+    if (!defAbilityId && defPossible.length > 0 && typeof getDistinctDefAbilityEffects === 'function') {
+      const variants = getDistinctDefAbilityEffects(
+        defPossible, effectMoveType, moveData.category, moveId, flags, baseTypeEff
+      );
+      for (const { abilityId, effect } of variants) {
+        const abilData = (defender.abilities || []).find(a => a.id === abilityId);
+        const abilName = abilData ? abilData.name : abilityId;
+        scenarios.push({
+          abilityId,
+          abilityName: abilName,
+          results: defConfigs.map(cfg => computeDmg(cfg, effect))
+        });
+      }
     }
 
-    results.push({
-      moveId: move,
-      moveName: moveData.name,
-      moveType: moveData.type,
-      category: moveData.category,
-      power: moveData.power,
-      results: moveResults
-    });
+    const entry = {
+      moveId,
+      moveName:     moveData.name,
+      moveType:     effectMoveType,
+      originalType: effectMoveType !== moveData.type ? moveData.type : null,
+      category:     moveData.category,
+      power:        effectPower,
+      results:      moveResults
+    };
+    if (scenarios.length > 0) entry.scenarios = scenarios;
+    results.push(entry);
   }
 
   return results;
@@ -278,18 +349,21 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
  * @param {number} minPower    最低威力阈值
  * @returns {Array} 按威胁度排序的技能列表
  */
-function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPower = 60) {
+function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPower = 60, abilityInfo = {}) {
+  const oppAbilityId       = abilityInfo.atkAbility         || '';
+  const oppPossibleAbils   = abilityInfo.atkPossibleAbilities || [];
+  const myAbilityId        = abilityInfo.myAbility           || '';
+
   const threats = [];
 
-  // 对方三种进攻配置（攻击/特攻）
+  // 对方三种进攻配置
   const atkConfigs = [
-    { label: '无投资', atkSP: 0, natureMult: 1.0 },
-    { label: '满攻击', atkSP: 32, natureMult: 1.0 },
-    { label: '满攻击+性格加成', atkSP: 32, natureMult: 1.1 }
+    { label: '无投资',           atkSP: 0,  natureMult: 1.0 },
+    { label: '满攻击',           atkSP: 32, natureMult: 1.0 },
+    { label: '满攻击+性格加成',  atkSP: 32, natureMult: 1.1 }
   ];
 
-  // 我方防御值（按实际配置）
-  const myHP = defender.stats.hp;
+  const myHP  = defender.stats.hp;
   const myDef = defender.stats.effective.def;
   const mySpd = defender.stats.effective.spd;
 
@@ -297,71 +371,121 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
     if (!MOVES[moveId]) continue;
     const moveData = MOVES[moveId];
     if (moveData.category === 'status') continue;
-    if (!moveData.power || moveData.power < minPower) continue;
 
-    const isPhys = moveData.category === 'physical';
-    const defBase = isPhys ? attacker.baseStats.atk : attacker.baseStats.spa;
+    // ── 1. 特殊技能场地联动
+    const specialEff = (typeof applySpecialMoveEffects === 'function')
+      ? applySpecialMoveEffects(moveId, field) : {};
 
-    // 计算属性相克
+    let effectMoveType = specialEff.newType  || moveData.type;
+    let effectPower    = specialEff.newPower || moveData.power;
+
+    if (!effectPower || effectPower < minPower) continue;
+
+    // ── 2. 技能标签
+    const flags = (typeof getMoveFlags === 'function')
+      ? getMoveFlags(moveId, { ...moveData, type: effectMoveType, power: effectPower })
+      : {};
+
+    // ── 3. 确定对方特性效果（已知用已知，未知取最坏情况）
+    let oppAbilEff = {};
+    let abilityNote = '';
+
+    if (oppAbilityId && typeof getAtkAbilityEffect === 'function') {
+      oppAbilEff  = getAtkAbilityEffect(oppAbilityId, moveId,
+        { ...moveData, type: effectMoveType, power: effectPower },
+        flags, attacker.types, field);
+      if (oppAbilEff.note) abilityNote = oppAbilEff.note;
+    } else if (oppPossibleAbils.length > 0 && typeof getWorstCaseAtkAbilityEffect === 'function') {
+      const worst = getWorstCaseAtkAbilityEffect(
+        oppPossibleAbils, moveId,
+        { ...moveData, type: effectMoveType, power: effectPower },
+        flags, attacker.types, field
+      );
+      if (worst) {
+        oppAbilEff  = worst.effect;
+        // 查找能力名称
+        const abilData = (attacker.abilities || []).find(a => a.id === worst.abilityId);
+        const abilName = abilData ? abilData.name : worst.abilityId;
+        abilityNote = `（含${abilName}加成）`;
+      }
+    }
+
+    if (oppAbilEff.newType)  effectMoveType = oppAbilEff.newType;
+    if (oppAbilEff.powerMult && oppAbilEff.powerMult !== 1)
+      effectPower = Math.floor(effectPower * oppAbilEff.powerMult);
+
+    const isPhys   = moveData.category === 'physical';
+    const defBase  = isPhys ? attacker.baseStats.atk : attacker.baseStats.spa;
+
+    // ── 4. 属性相克
     const typeEff = (typeof getTypeEffectiveness === 'function')
-      ? getTypeEffectiveness(moveData.type, defender.pokemon.types)
-      : 1;
+      ? getTypeEffectiveness(effectMoveType, defender.pokemon.types) : 1;
     if (typeEff === 0) continue;
 
-    // 对我方的有效防御值
+    // ── 5. 我方防御值
     let myDefStat = isPhys ? myDef : mySpd;
-    // Psyshock 用物理防御
-    if (moveId === 'psyshock' || moveId === 'psystrike') {
-      myDefStat = myDef;
-    }
-    // 沙暴对我方岩石系特防加成
-    if (!isPhys && field.weather === 'sandstorm' && defender.pokemon.types.includes('rock')) {
+    if (moveId === 'psyshock' || moveId === 'psystrike') myDefStat = myDef;
+    if (!isPhys && field.weather === 'sandstorm' && defender.pokemon.types.includes('rock'))
       myDefStat = Math.floor(myDefStat * 1.5);
-    }
 
+    // ── 6. 我方防御特性减伤
+    const myAbilDefEff = (myAbilityId && typeof getDefAbilityEffect === 'function')
+      ? getDefAbilityEffect(myAbilityId, effectMoveType, moveData.category, moveId, flags, typeEff)
+      : {};
+
+    if (myAbilDefEff.immune) continue; // 我方免疫，跳过此威胁
+
+    const myDefAbilMult = myAbilDefEff.mult || 1;
+
+    // ── 7. 计算三种进攻配置
     const moveResults = [];
     for (const atkCfg of atkConfigs) {
-      const oppAtkStat = calcStat(defBase, atkCfg.atkSP, atkCfg.natureMult);
+      let oppAtkStat = calcStat(defBase, atkCfg.atkSP, atkCfg.natureMult);
+      if (oppAbilEff.atkStatMult) oppAtkStat = Math.floor(oppAtkStat * oppAbilEff.atkStatMult);
 
-      // 我方场地光墙/反射壁/极光幕减伤（极光幕与另两者不叠加取其一）
       const myScreens = field.myScreens || {};
       const hasScreen = isPhys
         ? (myScreens.reflect || myScreens.auroraVeil)
         : (myScreens.lightScreen || myScreens.auroraVeil);
 
       const dmg = calcDamage({
-        attackStat: oppAtkStat,
+        attackStat:  oppAtkStat,
         defenseStat: myDefStat,
-        defenderHP: myHP,
-        power: moveData.power,
-        moveType: moveData.type,
-        category: moveData.category,
-        atkTypes: attacker.types,
-        defTypes: defender.pokemon.types,
+        defenderHP:  myHP,
+        power:       effectPower,
+        moveType:    effectMoveType,
+        category:    moveData.category,
+        atkTypes:    attacker.types,
+        defTypes:    defender.pokemon.types,
         field,
-        atkStatus: {},
-        modifiers: { screen: !!hasScreen }
+        atkStatus:   {},
+        modifiers: {
+          screen:       !!hasScreen,
+          stabOverride: oppAbilEff.stabOverride,
+          abilityMult:  myDefAbilMult
+        }
       });
 
-      moveResults.push({ ...atkCfg, ...dmg });
+      const noteArr = [specialEff.note, abilityNote, myAbilDefEff.note, dmg.note].filter(Boolean);
+      moveResults.push({ ...atkCfg, ...dmg, note: noteArr.join(' / ') || undefined });
     }
 
-    // 用最大伤害（满配对我）作为威胁排序依据
     const maxThreat = moveResults[moveResults.length - 1];
 
     threats.push({
       moveId,
-      moveName: moveData.name,
-      moveType: moveData.type,
-      category: moveData.category,
-      power: moveData.power,
+      moveName:    moveData.name,
+      moveType:    effectMoveType,
+      originalType: effectMoveType !== moveData.type ? moveData.type : null,
+      category:    moveData.category,
+      power:       effectPower,
       typeEff,
-      results: moveResults,
-      threatScore: maxThreat.maxPct  // 用满配最大伤害%作为威胁分
+      abilityNote,
+      results:     moveResults,
+      threatScore: maxThreat.maxPct
     });
   }
 
-  // 按威胁度降序排列
   threats.sort((a, b) => b.threatScore - a.threatScore);
   return threats;
 }

@@ -1041,3 +1041,17 @@ body {
 }
 
 .stat-bar-final { color: var(--accent-green); font-weight: 700; }
+
+
+/* ── 特性情景子行 ── */
+.ability-scenario-row td {
+  background: rgba(99, 110, 150, 0.08);
+  border-top: 1px dashed var(--border-default);
+}
+
+.ability-scenario-label {
+  font-size: 0.75rem;
+  color: var(--accent-blue);
+  font-style: italic;
+  padding-left: 8px;
+}

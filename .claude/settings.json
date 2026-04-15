@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(node -e \":*)",
-      "Bash(node data/convert_moves.js)"
+      "Bash(node data/convert_moves.js)",
+      "Bash(node data/convert_items.js)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

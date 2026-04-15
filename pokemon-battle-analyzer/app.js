@@ -769,7 +769,7 @@ function selectOppPokemon(id, name) {
   const pokemon = POKEMON[id];
   if (!pokemon) return;
 
-  // 填充特性下拉
+  // 填充特性下拉（含Mega形态特性）
   const abilSel = document.getElementById('opp-ability-select');
   abilSel.innerHTML = '<option value="">未知</option>';
   (pokemon.abilities || []).forEach(a => {
@@ -778,6 +778,20 @@ function selectOppPokemon(id, name) {
     opt.textContent = a.name + (a.isHidden ? '（隐藏特性）' : '');
     abilSel.appendChild(opt);
   });
+  // 加入Mega形态专属特性（如有）
+  if (pokemon.forms) {
+    Object.values(pokemon.forms).forEach(form => {
+      if (form.ability && form.ability.id) {
+        const already = abilSel.querySelector(`option[value="${form.ability.id}"]`);
+        if (!already) {
+          const opt = document.createElement('option');
+          opt.value = form.ability.id;
+          opt.textContent = form.ability.name + '（Mega形态）';
+          abilSel.appendChild(opt);
+        }
+      }
+    });
+  }
 
   // 显示对方属性
   document.getElementById('opp-stats-display').innerHTML = `
@@ -936,7 +950,16 @@ function runAnalysis() {
     item: mySlot.item
   };
 
-  const myDamages = calcMyMoveDamages(myAttacker, oppPokemon, myMoves, field, myAtkStatus);
+  // 特性信息
+  const myAbilityId  = mySlot.ability || '';
+  const oppAbilityId = document.getElementById('opp-ability-select')?.value || '';
+  const oppPossibleAbils = (oppPokemon.abilities || []).map(a => a.id);
+
+  const myDamages = calcMyMoveDamages(myAttacker, oppPokemon, myMoves, field, myAtkStatus, {
+    myAbility:              myAbilityId,
+    defAbility:             oppAbilityId,
+    defPossibleAbilities:   oppPossibleAbils
+  });
 
   // ---- 3. 对方威胁技能 ----
   const myStats_forDef = calcAllStats(myPokemon, {
@@ -952,7 +975,11 @@ function runAnalysis() {
     stats: myStats_forDef
   };
 
-  const threats = calcOpponentThreats(myDefender, oppPokemon, oppPokemon.moves || [], field, 60);
+  const threats = calcOpponentThreats(myDefender, oppPokemon, oppPokemon.moves || [], field, 60, {
+    atkAbility:              oppAbilityId,
+    atkPossibleAbilities:    oppPossibleAbils,
+    myAbility:               myAbilityId
+  });
 
   // ---- 渲染结果 ----
   document.getElementById('analysis-results').innerHTML = `
@@ -1048,12 +1075,18 @@ function renderMyDamageSection(damages, _myPkm, oppPkm) {
   }
 
   const rows = damages.map(d => {
-    return `
+    const typeLabel = d.originalType
+      ? `<span class="type-badge type-${d.originalType}-bg" style="font-size:0.7rem;opacity:0.5;text-decoration:line-through">${TYPE_NAMES[d.originalType]||d.originalType}</span>
+         <span style="font-size:0.7rem;color:var(--text-secondary)">→</span>
+         <span class="type-badge type-${d.moveType}-bg" style="font-size:0.7rem">${TYPE_NAMES[d.moveType]||d.moveType}</span>`
+      : `<span class="type-badge type-${d.moveType}-bg" style="font-size:0.7rem">${TYPE_NAMES[d.moveType]||d.moveType}</span>`;
+
+    const mainRow = `
       <tr>
         <td>
           <div style="font-weight:600">${d.moveName}</div>
-          <div style="display:flex;gap:4px;margin-top:3px;align-items:center">
-            <span class="type-badge type-${d.moveType}-bg" style="font-size:0.7rem">${TYPE_NAMES[d.moveType]||d.moveType}</span>
+          <div style="display:flex;gap:4px;margin-top:3px;align-items:center;flex-wrap:wrap">
+            ${typeLabel}
             <span class="move-badge ${d.category === 'physical' ? 'cat-physical' : 'cat-special'}" style="font-size:0.7rem">
               ${d.category === 'physical' ? '物理' : '特殊'}
             </span>
@@ -1062,6 +1095,16 @@ function renderMyDamageSection(damages, _myPkm, oppPkm) {
         </td>
         ${d.results.map(r => renderDamageCell(r)).join('')}
       </tr>`;
+
+    const scenarioRows = (d.scenarios || []).map(s => `
+      <tr class="ability-scenario-row">
+        <td>
+          <div class="ability-scenario-label">对方特性：${s.abilityName}</div>
+        </td>
+        ${s.results.map(r => renderDamageCell(r)).join('')}
+      </tr>`).join('');
+
+    return mainRow + scenarioRows;
   }).join('');
 
   return `
@@ -1127,17 +1170,24 @@ function renderThreatSection(threats, oppPkm, myPkm, myHP) {
     else if (maxResult.maxPct >= 70) threatClass = 'threat-high';
     else if (maxResult.maxPct >= 40) threatClass = 'threat-mid';
 
+    const typeDisplay = t.originalType
+      ? `<span class="type-badge type-${t.originalType}-bg" style="opacity:0.5;text-decoration:line-through">${TYPE_NAMES[t.originalType]||t.originalType}</span>
+         <span style="color:var(--text-secondary);font-size:0.8rem">→</span>
+         <span class="type-badge type-${t.moveType}-bg">${TYPE_NAMES[t.moveType]||t.moveType}</span>`
+      : `<span class="type-badge type-${t.moveType}-bg">${TYPE_NAMES[t.moveType]||t.moveType}</span>`;
+
     return `
       <div class="threat-item ${threatClass}">
         <div class="threat-header">
           <span class="threat-move-name">${t.moveName}</span>
-          <span class="type-badge type-${t.moveType}-bg">${TYPE_NAMES[t.moveType]||t.moveType}</span>
+          ${typeDisplay}
           <span class="move-badge ${t.category === 'physical' ? 'cat-physical' : 'cat-special'}">
             ${t.category === 'physical' ? '物理' : '特殊'}
           </span>
           <span class="threat-power">威力${t.power}</span>
           ${t.typeEff >= 2 ? `<span class="${getEffClass(t.typeEff)}">${getEffectivenessLabel(t.typeEff).text}</span>` : ''}
           ${isKO ? '<span class="ko-tag guaranteed">可能一击KO</span>' : ''}
+          ${t.abilityNote ? `<span style="font-size:0.72rem;color:var(--accent-yellow)">${t.abilityNote}</span>` : ''}
         </div>
         <div class="threat-dmg-grid">
           ${t.results.map(r => `

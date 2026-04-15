@@ -291,6 +291,48 @@ const MOVES = {
   'thunder-wave': { name: '电磁波', nameEn: 'Thunder Wave', type: 'electric', category: 'status', power: 0, accuracy: 90, pp: 20, priority: 0, note: '使对方麻痹（速度×0.5）' },
   'will-o-wisp': { name: '鬼火', nameEn: 'Will-O-Wisp', type: 'fire', category: 'status', power: 0, accuracy: 85, pp: 15, priority: 0, note: '使对方灼烧（物理攻击×0.5）' },
   'stealth-rock': { name: '隐形岩', nameEn: 'Stealth Rock', type: 'rock', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '场地上设置隐形岩' },
+
+  // ── 特性联动相关技能（补充） ──────────────────────────────────
+
+  // 天气/场地联动
+  'weather-ball':  { name: '气象球',   nameEn: 'Weather Ball',  type: 'normal',  category: 'special',  power: 50,  accuracy: 100, pp: 10, priority: 0, note: '天气下属性变化+威力×2' },
+  'terrain-pulse': { name: '地形脉冲', nameEn: 'Terrain Pulse', type: 'normal',  category: 'special',  power: 50,  accuracy: 100, pp: 10, priority: 0, note: '场地下属性变化+威力×2' },
+  'solar-blade':   { name: '叶刃日炸', nameEn: 'Solar Blade',   type: 'grass',   category: 'physical', power: 125, accuracy: 100, pp: 10, priority: 0, note: '晴天一回合发动，非晴天威力减半' },
+
+  // 咬击系（强颚）
+  'bite':          { name: '咬住',   nameEn: 'Bite',          type: 'dark',    category: 'physical', power: 60,  accuracy: 100, pp: 25, priority: 0 },
+  'fire-fang':     { name: '火焰牙', nameEn: 'Fire Fang',     type: 'fire',    category: 'physical', power: 65,  accuracy: 95,  pp: 15, priority: 0 },
+  'poison-fang':   { name: '毒牙',   nameEn: 'Poison Fang',   type: 'poison',  category: 'physical', power: 50,  accuracy: 100, pp: 15, priority: 0 },
+  'psychic-fangs': { name: '超能力牙', nameEn: 'Psychic Fangs', type: 'psychic', category: 'physical', power: 85,  accuracy: 100, pp: 10, priority: 0, note: '破除反射壁/光墙' },
+  'fishious-rend': { name: '嘶咬', nameEn: 'Fishious Rend',   type: 'water',   category: 'physical', power: 85,  accuracy: 100, pp: 10, priority: 0, note: '先手时威力×2' },
+  'jaw-lock':      { name: '咬住不放', nameEn: 'Jaw Lock',    type: 'dark',    category: 'physical', power: 80,  accuracy: 100, pp: 10, priority: 0, note: '使双方不能逃跑' },
+  'bug-bite':      { name: '虫咬', nameEn: 'Bug Bite',        type: 'bug',     category: 'physical', power: 60,  accuracy: 100, pp: 20, priority: 0 },
+
+  // 音波系（隔音）
+  'disarming-voice': { name: '迷人之声', nameEn: 'Disarming Voice', type: 'fairy',  category: 'special',  power: 40,  accuracy: 0,   pp: 15, priority: 0, alwaysHit: true },
+  'round':           { name: '合唱',   nameEn: 'Round',             type: 'normal', category: 'special',  power: 60,  accuracy: 100, pp: 15, priority: 0, note: '合唱时威力×2' },
+  'snore':           { name: '打鼾',   nameEn: 'Snore',             type: 'normal', category: 'special',  power: 50,  accuracy: 100, pp: 15, priority: 0, note: '仅睡眠时可用' },
+  'uproar':          { name: '喧嚣',   nameEn: 'Uproar',            type: 'normal', category: 'special',  power: 90,  accuracy: 100, pp: 10, priority: 0, note: '2-5回合连续，阻止入眠' },
+  'snarl':           { name: '恐吓',   nameEn: 'Snarl',             type: 'dark',   category: 'special',  power: 55,  accuracy: 95,  pp: 15, priority: 0, note: '使对方特攻-1' },
+  'noble-roar':      { name: '威吓叫声', nameEn: 'Noble Roar',      type: 'normal', category: 'status',   power: 0,   accuracy: 100, pp: 30, priority: 0, note: '使对方攻击/特攻-1' },
+  'relic-song':      { name: '古老之歌', nameEn: 'Relic Song',      type: 'normal', category: 'special',  power: 75,  accuracy: 100, pp: 10, priority: 0, note: '使对方入眠' },
+  'overdrive':       { name: '过电',   nameEn: 'Overdrive',         type: 'electric', category: 'special', power: 80, accuracy: 100, pp: 10, priority: 0 },
+  'clanging-scales': { name: '龙鳞嘈音', nameEn: 'Clanging Scales', type: 'dragon', category: 'special',  power: 110, accuracy: 100, pp: 5,  priority: 0, note: '使用后防御-1' },
+  'alluring-voice':  { name: '魅惑之声', nameEn: 'Alluring Voice', type: 'fairy',  category: 'special',  power: 80,  accuracy: 100, pp: 10, priority: 0 },
+
+  // 波动系（大炮手）
+  'water-pulse':   { name: '水之波动', nameEn: 'Water Pulse',   type: 'water',  category: 'special',  power: 60,  accuracy: 100, pp: 20, priority: 0 },
+
+  // 接触/拳击系
+  'aerial-ace':    { name: '燕返',   nameEn: 'Aerial Ace',   type: 'flying',   category: 'physical', power: 60,  accuracy: 0,   pp: 20, priority: 0, alwaysHit: true },
+  'focus-punch':   { name: '专注拳', nameEn: 'Focus Punch',  type: 'fighting', category: 'physical', power: 150, accuracy: 100, pp: 20, priority: -3, note: '受攻击即失败' },
+  'shadow-punch':  { name: '暗影拳', nameEn: 'Shadow Punch', type: 'ghost',    category: 'physical', power: 60,  accuracy: 0,   pp: 20, priority: 0, alwaysHit: true },
+
+  // 妖精系补充
+  'draining-kiss': { name: '吸取之吻', nameEn: 'Draining Kiss', type: 'fairy',  category: 'special',  power: 50,  accuracy: 100, pp: 10, priority: 0, note: '回复造成伤害的75%' },
+
+  // 岩石系补充
+  'ancient-power': { name: '太古之力', nameEn: 'Ancient Power', type: 'rock',  category: 'special',  power: 60,  accuracy: 100, pp: 5,  priority: 0, note: '10%使所有能力+1' },
 };
 
 /**
