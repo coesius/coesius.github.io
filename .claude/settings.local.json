@@ -20,7 +20,18 @@
       "Bash(node data/convert_pokemon.js)",
       "Bash(node -e \":*)",
       "Bash(node -e \"require\\(''''pinyin-pro''''\\)\")",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(python3 -c ':*)",
+      "Bash(python -c ':*)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const code=fs.readFileSync\\('moves.js','utf8'\\); eval\\(code\\); const keys=Object.keys\\(MOVES\\); console.log\\('Total moves:', keys.length\\); console.log\\('Special moves:'\\); ['dragon-darts','surging-strikes','triple-axel','flower-trick','hex','venoshock','facade','brine','bullet-seed'].forEach\\(k=>{if\\(MOVES[k]\\){const m=MOVES[k]; const extra=Object.keys\\(m\\).filter\\(f=>!['name','type','category','power','note'].includes\\(f\\)\\); console.log\\(' '+k+':', extra.length?extra.join\\(','\\):'\\(standard\\)'\\);} else console.log\\(' '+k+': MISSING!'\\)}\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const code=fs.readFileSync\\('moves.js','utf8'\\); const fn = new Function\\(code + '; return MOVES;'\\); const MOVES = fn\\(\\); const keys=Object.keys\\(MOVES\\); console.log\\('Total moves:', keys.length\\); ['dragon-darts','surging-strikes','triple-axel','flower-trick','hex','venoshock','facade','brine','bullet-seed'].forEach\\(k=>{if\\(MOVES[k]\\){const m=MOVES[k]; const extra=Object.keys\\(m\\).filter\\(f=>!['name','type','category','power','note'].includes\\(f\\)\\); console.log\\(k+':', extra.length?extra.join\\(','\\):'standard'\\);} else console.log\\(k+': MISSING!'\\)}\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const code=fs.readFileSync\\('moves.js','utf8'\\); const fn = new Function\\(code + '; return MOVES;'\\); const MOVES = fn\\(\\); const keys=Object.keys\\(MOVES\\); const total=keys.length; const hitCount=keys.filter\\(k=>MOVES[k].hitCount\\).length; const hitMinMax=keys.filter\\(k=>MOVES[k].hitMin\\).length; const alwaysCrit=keys.filter\\(k=>MOVES[k].alwaysCrit\\).length; const tripleAxel=keys.filter\\(k=>MOVES[k].tripleAxel\\).length; const condPower=keys.filter\\(k=>MOVES[k].conditionalPower\\).length; const status=keys.filter\\(k=>MOVES[k].category==='status'\\).length; const physical=keys.filter\\(k=>MOVES[k].category==='physical'\\).length; const special=keys.filter\\(k=>MOVES[k].category==='special'\\).length; console.log\\('=== moves.js summary ==='\\); console.log\\('Total:', total, '\\(329 usable + 2 forms = OK if ~331\\)'\\); console.log\\('Status moves:', status\\); console.log\\('Physical moves:', physical\\); console.log\\('Special moves:', special\\); console.log\\('hitCount \\(fixed multi\\):', hitCount\\); console.log\\('hitMin/Max \\(2-5 hit\\):', hitMinMax\\); console.log\\('alwaysCrit:', alwaysCrit\\); console.log\\('tripleAxel:', tripleAxel\\); console.log\\('conditionalPower:', condPower\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const code=fs.readFileSync\\('moves.js','utf8'\\); const fn = new Function\\(code + '; return MOVES;'\\); const MOVES = fn\\(\\); const keys=Object.keys\\(MOVES\\); const expected329=['accelerock','acid-armor','acid-spray','acrobatics','aerial-ace','agility','air-cutter','air-slash','amnesia','ancient-power','aqua-jet','aqua-ring','aqua-tail','aura-sphere','aurora-beam','aurora-veil','avalanche']; const missing=expected329.filter\\(k=>!MOVES[k]\\); console.log\\('Sample check missing:', missing.length===0?'all present':missing\\);\")",
+      "Bash(node -e ' *)",
+      "Bash(node --check \"data/moves.js\")",
+      "Bash(node --check \"calc/stats.js\")",
+      "Bash(node --check \"calc/damage.js\")",
+      "Bash(node --check \"app.js\")"
     ]
   }
 }

@@ -1,347 +1,402 @@
-// 竞技常用技能数据
-// category: 'physical'|'special'|'status'
-// priority: 先制度（0=普通，1=优先，-1=后手等）
+/**
+ * 宝可梦冠军技能数据库
+ * 来源：游戏实装技能表（Moves.txt），共 329 个可用技能
+ * 不收录：Signal Beam(235)、Silver Wind(236)、Tail Glow(285)、Twineedle(308)（标记为不可用）
+ *
+ * 特殊字段说明：
+ *   hitCount          {number}  固定命中次数（如龙箭×2，水流连打×3）
+ *   hitMin / hitMax   {number}  随机命中次数范围（2-5 连击）
+ *   alwaysCrit        {boolean} 必定击中要害（1.5×，无视攻方负面能力变化）
+ *   tripleAxel        {boolean} 三旋击（3 次，威力递增 20/40/60，累计 120）
+ *   conditionalPower  {Object}  条件威力 { boostedPower, condition }
+ *     condition 取值：
+ *       'targetHasStatus'  对方有任意异常状态时触发
+ *       'targetPoisoned'   对方中毒/剧毒时触发
+ *       'userHasStatus'    使用者有异常状态（烧伤/麻痹/中毒）时触发
+ *       'targetHalfHP'     对方 HP ≤ 50% 时触发
+ */
 
 const MOVES = {
-  // ========== 一般属性 ==========
-  'quick-attack': { name: '电光一闪', nameEn: 'Quick Attack', type: 'normal', category: 'physical', power: 40, accuracy: 100, pp: 30, priority: 1 },
-  'extreme-speed': { name: '神速', nameEn: 'Extreme Speed', type: 'normal', category: 'physical', power: 80, accuracy: 100, pp: 5, priority: 2 },
-  'body-slam': { name: '泰山压顶', nameEn: 'Body Slam', type: 'normal', category: 'physical', power: 85, accuracy: 100, pp: 15, priority: 0 },
-  'double-edge': { name: '舍身冲撞', nameEn: 'Double-Edge', type: 'normal', category: 'physical', power: 120, accuracy: 100, pp: 15, priority: 0 },
-  'return': { name: '报恩', nameEn: 'Return', type: 'normal', category: 'physical', power: 102, accuracy: 100, pp: 20, priority: 0 },
-  'facade': { name: '硬撑', nameEn: 'Facade', type: 'normal', category: 'physical', power: 70, accuracy: 100, pp: 20, priority: 0, note: '异常状态时威力翻倍' },
-  'hyper-voice': { name: '巨声', nameEn: 'Hyper Voice', type: 'normal', category: 'special', power: 90, accuracy: 100, pp: 10, priority: 0 },
-  'boomburst': { name: '爆音波', nameEn: 'Boomburst', type: 'normal', category: 'special', power: 140, accuracy: 100, pp: 10, priority: 0 },
-  'swift': { name: '高速星星', nameEn: 'Swift', type: 'normal', category: 'special', power: 60, accuracy: 0, pp: 20, priority: 0, alwaysHit: true },
+  // A
+  'accelerock': { name: '岩崩', type: 'rock', category: 'physical', power: 40 },
+  'acid-armor': { name: '溶化', type: 'poison', category: 'status', power: 0 },
+  'acid-spray': { name: '酸液炸弹', type: 'poison', category: 'special', power: 40 },
+  'acrobatics': { name: '杂技', type: 'flying', category: 'physical', power: 55 },
+  'aerial-ace': { name: '燕返', type: 'flying', category: 'physical', power: 60 },
+  'agility': { name: '高速移动', type: 'psychic', category: 'status', power: 0 },
+  'air-cutter': { name: '大气切割', type: 'flying', category: 'special', power: 60 },
+  'air-slash': { name: '空气斩', type: 'flying', category: 'special', power: 75 },
+  'amnesia': { name: '忘却', type: 'psychic', category: 'status', power: 0 },
+  'ancient-power': { name: '原始之力', type: 'rock', category: 'special', power: 60 },
+  'aqua-jet': { name: '水流喷射', type: 'water', category: 'physical', power: 40 },
+  'aqua-ring': { name: '水之戒', type: 'water', category: 'status', power: 0 },
+  'aqua-tail': { name: '水尾', type: 'water', category: 'physical', power: 90 },
+  'aura-sphere': { name: '波导弹', type: 'fighting', category: 'special', power: 80 },
+  'aurora-beam': { name: '极光束', type: 'ice', category: 'special', power: 65 },
+  'aurora-veil': { name: '极光幕', type: 'ice', category: 'status', power: 0 },
+  'avalanche': { name: '雪崩', type: 'ice', category: 'physical', power: 60, note: '本回合被攻击时威力翻倍（×120）' },
 
-  // ========== 火属性 ==========
-  'flamethrower': { name: '喷射火焰', nameEn: 'Flamethrower', type: 'fire', category: 'special', power: 90, accuracy: 100, pp: 15, priority: 0 },
-  'fire-blast': { name: '大字爆炎', nameEn: 'Fire Blast', type: 'fire', category: 'special', power: 110, accuracy: 85, pp: 5, priority: 0 },
-  'overheat': { name: '过热', nameEn: 'Overheat', type: 'fire', category: 'special', power: 130, accuracy: 90, pp: 5, priority: 0, note: '使用后特攻-2' },
-  'heat-wave': { name: '热风', nameEn: 'Heat Wave', type: 'fire', category: 'special', power: 95, accuracy: 90, pp: 10, priority: 0 },
-  'fire-punch': { name: '火焰拳', nameEn: 'Fire Punch', type: 'fire', category: 'physical', power: 75, accuracy: 100, pp: 15, priority: 0 },
-  'flare-blitz': { name: '闪焰冲锋', nameEn: 'Flare Blitz', type: 'fire', category: 'physical', power: 120, accuracy: 100, pp: 15, priority: 0, note: '反弹伤害1/3' },
-  'sacred-fire': { name: '神圣之火', nameEn: 'Sacred Fire', type: 'fire', category: 'physical', power: 100, accuracy: 95, pp: 5, priority: 0 },
-  'burning-jealousy': { name: '妒火', nameEn: 'Burning Jealousy', type: 'fire', category: 'special', power: 70, accuracy: 100, pp: 5, priority: 0 },
+  // B
+  'baby-doll-eyes': { name: '水汪汪眼神', type: 'fairy', category: 'status', power: 0 },
+  'bite': { name: '咬住', type: 'dark', category: 'physical', power: 60 },
+  'blaze-kick': { name: '焰踢', type: 'fire', category: 'physical', power: 85 },
+  'blizzard': { name: '暴风雪', type: 'ice', category: 'special', power: 110 },
+  'body-press': { name: '体重攻击', type: 'fighting', category: 'physical', power: 80 },
+  'body-slam': { name: '猛撞', type: 'normal', category: 'physical', power: 85 },
+  'brave-bird': { name: '勇鸟冲', type: 'flying', category: 'physical', power: 120 },
+  'brick-break': { name: '劈瓦', type: 'fighting', category: 'physical', power: 75 },
+  'brine': { name: '盐水', type: 'water', category: 'special', power: 65, conditionalPower: { boostedPower: 130, condition: 'targetHalfHP' }, note: '对方HP≤50%时威力×2' },
+  'brutal-swing': { name: '用力挥动', type: 'dark', category: 'physical', power: 60 },
+  'bubble-beam': { name: '泡沫光线', type: 'water', category: 'special', power: 65 },
+  'bug-bite': { name: '虫咬', type: 'bug', category: 'physical', power: 60 },
+  'bug-buzz': { name: '虫鸣', type: 'bug', category: 'special', power: 90 },
+  'bulk-up': { name: '健美', type: 'fighting', category: 'status', power: 0 },
+  'bulldoze': { name: '大地破坏', type: 'ground', category: 'physical', power: 60 },
+  'bullet-punch': { name: '子弹拳', type: 'steel', category: 'physical', power: 40 },
+  'bullet-seed': { name: '种子机关枪', type: 'grass', category: 'physical', power: 25, hitMin: 2, hitMax: 5 },
 
-  // ========== 水属性 ==========
-  'surf': { name: '冲浪', nameEn: 'Surf', type: 'water', category: 'special', power: 90, accuracy: 100, pp: 15, priority: 0 },
-  'hydro-pump': { name: '水炮', nameEn: 'Hydro Pump', type: 'water', category: 'special', power: 110, accuracy: 80, pp: 5, priority: 0 },
-  'scald': { name: '热水', nameEn: 'Scald', type: 'water', category: 'special', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'water-fall': { name: '攀瀑', nameEn: 'Waterfall', type: 'water', category: 'physical', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'aqua-jet': { name: '水流喷射', nameEn: 'Aqua Jet', type: 'water', category: 'physical', power: 40, accuracy: 100, pp: 20, priority: 1 },
-  'crabhammer': { name: '蟹钳锤', nameEn: 'Crabhammer', type: 'water', category: 'physical', power: 100, accuracy: 90, pp: 10, priority: 0 },
-  'liquidation': { name: '水流裂破', nameEn: 'Liquidation', type: 'water', category: 'physical', power: 85, accuracy: 100, pp: 10, priority: 0 },
-  'origin-pulse': { name: '根源波动', nameEn: 'Origin Pulse', type: 'water', category: 'special', power: 110, accuracy: 85, pp: 10, priority: 0 },
-  'wave-crash': { name: '波动冲', nameEn: 'Wave Crash', type: 'water', category: 'physical', power: 120, accuracy: 100, pp: 10, priority: 0, note: '反弹伤害1/3' },
+  // C
+  'calm-mind': { name: '冥想', type: 'psychic', category: 'status', power: 0 },
+  'charge': { name: '充电', type: 'electric', category: 'status', power: 0 },
+  'charge-beam': { name: '充电光束', type: 'electric', category: 'special', power: 50 },
+  'charm': { name: '撒娇', type: 'fairy', category: 'status', power: 0 },
+  'close-combat': { name: '近身战', type: 'fighting', category: 'physical', power: 120 },
+  'coil': { name: '缠绕', type: 'poison', category: 'status', power: 0 },
+  'confuse-ray': { name: '鬼火（混乱光）', type: 'ghost', category: 'status', power: 0 },
+  'confusion': { name: '念力', type: 'psychic', category: 'special', power: 50 },
+  'cotton-guard': { name: '棉花防守', type: 'grass', category: 'status', power: 0 },
+  'crabhammer': { name: '蟹钳', type: 'water', category: 'physical', power: 100 },
+  'cross-chop': { name: '交叉劈砍', type: 'fighting', category: 'physical', power: 100 },
+  'cross-poison': { name: '十字毒刃', type: 'poison', category: 'physical', power: 70 },
+  'crunch': { name: '咬碎', type: 'dark', category: 'physical', power: 80 },
+  'curse': { name: '诅咒', type: 'ghost', category: 'status', power: 0 },
 
-  // ========== 电属性 ==========
-  'thunderbolt': { name: '十万伏特', nameEn: 'Thunderbolt', type: 'electric', category: 'special', power: 90, accuracy: 100, pp: 15, priority: 0 },
-  'thunder': { name: '打雷', nameEn: 'Thunder', type: 'electric', category: 'special', power: 110, accuracy: 70, pp: 10, priority: 0, note: '降雨必中' },
-  'wild-charge': { name: '疯狂伏特', nameEn: 'Wild Charge', type: 'electric', category: 'physical', power: 90, accuracy: 100, pp: 15, priority: 0, note: '反弹伤害1/4' },
-  'thunder-punch': { name: '雷电拳', nameEn: 'Thunder Punch', type: 'electric', category: 'physical', power: 75, accuracy: 100, pp: 15, priority: 0 },
-  'volt-tackle': { name: '伏特攻击', nameEn: 'Volt Tackle', type: 'electric', category: 'physical', power: 120, accuracy: 100, pp: 15, priority: 0, note: '反弹伤害1/3' },
-  'bolt-strike': { name: '雷击', nameEn: 'Bolt Strike', type: 'electric', category: 'physical', power: 130, accuracy: 85, pp: 5, priority: 0 },
-  'discharge': { name: '放电', nameEn: 'Discharge', type: 'electric', category: 'special', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'volt-switch': { name: '伏特替换', nameEn: 'Volt Switch', type: 'electric', category: 'special', power: 70, accuracy: 100, pp: 20, priority: 0 },
+  // D
+  'dark-pulse': { name: '恶波', type: 'dark', category: 'special', power: 80 },
+  'dazzling-gleam': { name: '魔法闪耀', type: 'fairy', category: 'special', power: 80 },
+  'disable': { name: '定身法', type: 'normal', category: 'status', power: 0 },
+  'discharge': { name: '放电', type: 'electric', category: 'special', power: 80 },
+  'double-hit': { name: '双击', type: 'normal', category: 'physical', power: 35, hitCount: 2 },
+  'double-kick': { name: '二连踢', type: 'fighting', category: 'physical', power: 30, hitCount: 2 },
+  'double-team': { name: '分身', type: 'normal', category: 'status', power: 0 },
+  'draco-meteor': { name: '流星群', type: 'dragon', category: 'special', power: 130 },
+  'dragon-breath': { name: '龙息', type: 'dragon', category: 'special', power: 60 },
+  'dragon-claw': { name: '龙爪', type: 'dragon', category: 'physical', power: 80 },
+  'dragon-dance': { name: '龙之舞', type: 'dragon', category: 'status', power: 0 },
+  'dragon-darts': { name: '龙箭', type: 'dragon', category: 'physical', power: 50, hitCount: 2 },
+  'dragon-pulse': { name: '龙之波动', type: 'dragon', category: 'special', power: 85 },
+  'dragon-rush': { name: '龙冲击', type: 'dragon', category: 'physical', power: 100 },
+  'dragon-tail': { name: '龙尾', type: 'dragon', category: 'physical', power: 60 },
+  'drain-punch': { name: '吸取拳', type: 'fighting', category: 'physical', power: 75 },
+  'draining-kiss': { name: '吸取之吻', type: 'fairy', category: 'special', power: 50 },
+  'dream-eater': { name: '梦吞', type: 'psychic', category: 'special', power: 100, note: '目标必须处于睡眠状态才有效' },
+  'drill-peck': { name: '啄钻', type: 'flying', category: 'physical', power: 80 },
+  'drill-run': { name: '钻头钻', type: 'ground', category: 'physical', power: 80 },
+  'dual-wingbeat': { name: '双翼击', type: 'flying', category: 'physical', power: 40, hitCount: 2 },
 
-  // ========== 草属性 ==========
-  'energy-ball': { name: '能量球', nameEn: 'Energy Ball', type: 'grass', category: 'special', power: 90, accuracy: 100, pp: 10, priority: 0 },
-  'giga-drain': { name: '终极吸取', nameEn: 'Giga Drain', type: 'grass', category: 'special', power: 75, accuracy: 100, pp: 10, priority: 0 },
-  'leaf-blade': { name: '叶刃', nameEn: 'Leaf Blade', type: 'grass', category: 'physical', power: 90, accuracy: 100, pp: 15, priority: 0 },
-  'power-whip': { name: '强力鞭打', nameEn: 'Power Whip', type: 'grass', category: 'physical', power: 120, accuracy: 85, pp: 10, priority: 0 },
-  'wood-hammer': { name: '木槌', nameEn: 'Wood Hammer', type: 'grass', category: 'physical', power: 120, accuracy: 100, pp: 15, priority: 0, note: '反弹伤害1/3' },
-  'bullet-seed': { name: '种子机关枪', nameEn: 'Bullet Seed', type: 'grass', category: 'physical', power: 25, accuracy: 100, pp: 30, priority: 0, note: '2-5连击' },
-  'seed-flare': { name: '种子闪光', nameEn: 'Seed Flare', type: 'grass', category: 'special', power: 120, accuracy: 85, pp: 5, priority: 0 },
-  'grassy-glide': { name: '青草滑梯', nameEn: 'Grassy Glide', type: 'grass', category: 'physical', power: 55, accuracy: 100, pp: 20, priority: 0, note: '草木场地中优先度+1' },
+  // E
+  'earth-power': { name: '大地之力', type: 'ground', category: 'special', power: 90 },
+  'earthquake': { name: '地震', type: 'ground', category: 'physical', power: 100 },
+  'electro-ball': { name: '电球', type: 'electric', category: 'special', power: 0, note: '威力取决于使用者与目标速度比，无法预先计算（上限150）' },
+  'ember': { name: '火花', type: 'fire', category: 'special', power: 40 },
+  'encore': { name: '再来一次', type: 'normal', category: 'status', power: 0 },
+  'energy-ball': { name: '能量球', type: 'grass', category: 'special', power: 90 },
+  'extrasensory': { name: '超感官', type: 'psychic', category: 'special', power: 80 },
+  'extreme-speed': { name: '神速', type: 'normal', category: 'physical', power: 80 },
 
-  // ========== 冰属性 ==========
-  'ice-beam': { name: '冰冻光束', nameEn: 'Ice Beam', type: 'ice', category: 'special', power: 90, accuracy: 100, pp: 10, priority: 0 },
-  'blizzard': { name: '暴风雪', nameEn: 'Blizzard', type: 'ice', category: 'special', power: 110, accuracy: 70, pp: 5, priority: 0, note: '下雪天气必中' },
-  'ice-punch': { name: '冰冻拳', nameEn: 'Ice Punch', type: 'ice', category: 'physical', power: 75, accuracy: 100, pp: 15, priority: 0 },
-  'icicle-crash': { name: '冰柱坠击', nameEn: 'Icicle Crash', type: 'ice', category: 'physical', power: 85, accuracy: 90, pp: 10, priority: 0 },
-  'freeze-dry': { name: '冷冻干燥', nameEn: 'Freeze-Dry', type: 'ice', category: 'special', power: 70, accuracy: 100, pp: 20, priority: 0, note: '对水属性效果不一般' },
-  'icicle-spear': { name: '冰锥', nameEn: 'Icicle Spear', type: 'ice', category: 'physical', power: 25, accuracy: 100, pp: 30, priority: 0, note: '2-5连击' },
-  'glacial-lance': { name: '雪矛', nameEn: 'Glacial Lance', type: 'ice', category: 'physical', power: 120, accuracy: 100, pp: 5, priority: 0 },
+  // F
+  'facade': { name: '硬撑', type: 'normal', category: 'physical', power: 70, conditionalPower: { boostedPower: 140, condition: 'userHasStatus' }, note: '使用者有烧伤/麻痹/中毒时威力×2' },
+  'fake-out': { name: '猫手', type: 'normal', category: 'physical', power: 40 },
+  'fake-tears': { name: '装哭', type: 'dark', category: 'status', power: 0 },
+  'feather-dance': { name: '羽毛舞', type: 'flying', category: 'status', power: 0 },
+  'fire-blast': { name: '大火焰', type: 'fire', category: 'special', power: 110 },
+  'fire-fang': { name: '火焰牙', type: 'fire', category: 'physical', power: 65 },
+  'fire-punch': { name: '火焰拳', type: 'fire', category: 'physical', power: 75 },
+  'fire-spin': { name: '火焰漩涡', type: 'fire', category: 'special', power: 35 },
+  'flame-charge': { name: '火焰冲锋', type: 'fire', category: 'physical', power: 50 },
+  'flame-wheel': { name: '火焰轮', type: 'fire', category: 'physical', power: 60 },
+  'flamethrower': { name: '喷火', type: 'fire', category: 'special', power: 90 },
+  'flare-blitz': { name: '闪焰冲锋', type: 'fire', category: 'physical', power: 120 },
+  'flash-cannon': { name: '光炮', type: 'steel', category: 'special', power: 80 },
+  'flip-turn': { name: '折返', type: 'water', category: 'physical', power: 60 },
+  'fly': { name: '飞翔', type: 'flying', category: 'physical', power: 90 },
+  'focus-blast': { name: '气力球', type: 'fighting', category: 'special', power: 120 },
+  'focus-energy': { name: '凝神', type: 'normal', category: 'status', power: 0 },
+  'follow-me': { name: '跟我来', type: 'normal', category: 'status', power: 0 },
+  'foul-play': { name: '坏招', type: 'dark', category: 'physical', power: 95 },
+  'freeze-dry': { name: '冷冻干燥', type: 'ice', category: 'special', power: 70, note: '对水属性超效（固有特性）' },
+  'fury-attack': { name: '连续切割', type: 'normal', category: 'physical', power: 15, hitMin: 2, hitMax: 5 },
+  'fury-cutter': { name: '飞刃', type: 'bug', category: 'physical', power: 40 },
+  'future-sight': { name: '先见之明', type: 'psychic', category: 'special', power: 120 },
 
-  // ========== 格斗属性 ==========
-  'close-combat': { name: '近身战', nameEn: 'Close Combat', type: 'fighting', category: 'physical', power: 120, accuracy: 100, pp: 5, priority: 0, note: '使用后防御和特防各-1' },
-  'superpower': { name: '蛮力', nameEn: 'Superpower', type: 'fighting', category: 'physical', power: 120, accuracy: 100, pp: 5, priority: 0, note: '使用后攻击和防御各-1' },
-  'high-jump-kick': { name: '飞膝踢', nameEn: 'High Jump Kick', type: 'fighting', category: 'physical', power: 130, accuracy: 90, pp: 10, priority: 0, note: '命中失败则扣HP' },
-  'drain-punch': { name: '吸取拳', nameEn: 'Drain Punch', type: 'fighting', category: 'physical', power: 75, accuracy: 100, pp: 10, priority: 0 },
-  'mach-punch': { name: '音速拳', nameEn: 'Mach Punch', type: 'fighting', category: 'physical', power: 40, accuracy: 100, pp: 30, priority: 1 },
-  'aura-sphere': { name: '波导弹', nameEn: 'Aura Sphere', type: 'fighting', category: 'special', power: 80, accuracy: 0, pp: 20, priority: 0, alwaysHit: true },
-  'focus-blast': { name: '真气弹', nameEn: 'Focus Blast', type: 'fighting', category: 'special', power: 120, accuracy: 70, pp: 5, priority: 0 },
-  'hammer-arm': { name: '臂锤', nameEn: 'Hammer Arm', type: 'fighting', category: 'physical', power: 100, accuracy: 90, pp: 10, priority: 0, note: '速度-1' },
+  // G
+  'giga-drain': { name: '吸取', type: 'grass', category: 'special', power: 75 },
+  'giga-impact': { name: '大冲击', type: 'normal', category: 'physical', power: 150 },
+  'grass-knot': { name: '草结', type: 'grass', category: 'special', power: 0, note: '威力取决于目标体重，无法预先计算' },
+  'grassy-glide': { name: '青草滑行', type: 'grass', category: 'physical', power: 55 },
+  'grav-apple': { name: '重力苹果', type: 'grass', category: 'physical', power: 80 },
+  'growl': { name: '叫声', type: 'normal', category: 'status', power: 0 },
+  'growth': { name: '发育', type: 'normal', category: 'status', power: 0 },
+  'gunk-shot': { name: '弹垃圾', type: 'poison', category: 'physical', power: 120 },
+  'gust': { name: '阵风', type: 'flying', category: 'special', power: 40 },
+  'gyro-ball': { name: '陀螺球', type: 'steel', category: 'physical', power: 0, note: '威力=min(150, floor(25×目标速度/使用者速度))，无法预先计算' },
 
-  // ========== 毒属性 ==========
-  'sludge-bomb': { name: '污泥炸弹', nameEn: 'Sludge Bomb', type: 'poison', category: 'special', power: 90, accuracy: 100, pp: 10, priority: 0 },
-  'sludge-wave': { name: '污泥波', nameEn: 'Sludge Wave', type: 'poison', category: 'special', power: 95, accuracy: 100, pp: 10, priority: 0 },
-  'gunk-shot': { name: '垃圾射击', nameEn: 'Gunk Shot', type: 'poison', category: 'physical', power: 120, accuracy: 80, pp: 5, priority: 0 },
-  'poison-jab': { name: '毒击', nameEn: 'Poison Jab', type: 'poison', category: 'physical', power: 80, accuracy: 100, pp: 20, priority: 0 },
+  // H
+  'hail': { name: '冰雹', type: 'ice', category: 'status', power: 0 },
+  'hammer-arm': { name: '臂锤', type: 'fighting', category: 'physical', power: 100 },
+  'harden': { name: '变硬', type: 'normal', category: 'status', power: 0 },
+  'headbutt': { name: '头锤', type: 'normal', category: 'physical', power: 70 },
+  'heal-bell': { name: '治愈铃声', type: 'normal', category: 'status', power: 0 },
+  'heal-pulse': { name: '治愈脉冲', type: 'psychic', category: 'status', power: 0 },
+  'heat-wave': { name: '热风', type: 'fire', category: 'special', power: 95 },
+  'heavy-slam': { name: '重磅撞击', type: 'steel', category: 'physical', power: 0, note: '威力取决于使用者与目标体重差，无法预先计算（上限120）' },
+  'helping-hand': { name: '辅助', type: 'normal', category: 'status', power: 0 },
+  'hex': { name: '祸不单行', type: 'ghost', category: 'special', power: 65, conditionalPower: { boostedPower: 130, condition: 'targetHasStatus' }, note: '对方有异常状态时威力×2' },
+  'high-horsepower': { name: '高马力', type: 'ground', category: 'physical', power: 95 },
+  'high-jump-kick': { name: '飞膝踢', type: 'fighting', category: 'physical', power: 130 },
+  'horn-attack': { name: '角撞', type: 'normal', category: 'physical', power: 65 },
+  'howl': { name: '嚎叫', type: 'normal', category: 'status', power: 0 },
+  'hurricane': { name: '飓风', type: 'flying', category: 'special', power: 110 },
+  'hydro-pump': { name: '水炮', type: 'water', category: 'special', power: 110 },
+  'hyper-beam': { name: '破坏光线', type: 'normal', category: 'special', power: 150 },
+  'hyper-fang': { name: '大牙', type: 'normal', category: 'physical', power: 80 },
+  'hyper-voice': { name: '超音波', type: 'normal', category: 'special', power: 90 },
+  'hypnosis': { name: '催眠术', type: 'psychic', category: 'status', power: 0 },
 
-  // ========== 地面属性 ==========
-  'earthquake': { name: '地震', nameEn: 'Earthquake', type: 'ground', category: 'physical', power: 100, accuracy: 100, pp: 10, priority: 0 },
-  'earth-power': { name: '大地之力', nameEn: 'Earth Power', type: 'ground', category: 'special', power: 90, accuracy: 100, pp: 10, priority: 0 },
-  'drill-run': { name: '直冲钻', nameEn: 'Drill Run', type: 'ground', category: 'physical', power: 80, accuracy: 95, pp: 10, priority: 0, note: '高击中要害率' },
-  'high-horsepower': { name: '十万马力', nameEn: 'High Horsepower', type: 'ground', category: 'physical', power: 95, accuracy: 95, pp: 10, priority: 0 },
-  'stomping-tantrum': { name: '跺脚', nameEn: 'Stomping Tantrum', type: 'ground', category: 'physical', power: 75, accuracy: 100, pp: 10, priority: 0 },
-  'precipice-blades': { name: '断崖之剑', nameEn: 'Precipice Blades', type: 'ground', category: 'physical', power: 120, accuracy: 85, pp: 10, priority: 0 },
+  // I
+  'ice-beam': { name: '冰冻光线', type: 'ice', category: 'special', power: 90 },
+  'ice-fang': { name: '冰冻牙', type: 'ice', category: 'physical', power: 65 },
+  'ice-punch': { name: '冰冻拳', type: 'ice', category: 'physical', power: 75 },
+  'ice-shard': { name: '冰砾', type: 'ice', category: 'physical', power: 40 },
+  'ice-spinner': { name: '冰上旋转', type: 'ice', category: 'physical', power: 80 },
+  'icicle-crash': { name: '冰柱坠落', type: 'ice', category: 'physical', power: 85 },
+  'icicle-spear': { name: '冰锥', type: 'ice', category: 'physical', power: 25, hitMin: 2, hitMax: 5 },
+  'icy-wind': { name: '冰风', type: 'ice', category: 'special', power: 55 },
+  'imprison': { name: '封印', type: 'psychic', category: 'status', power: 0 },
+  'inferno': { name: '地狱火焰', type: 'fire', category: 'special', power: 100 },
+  'iron-defense': { name: '铁壁', type: 'steel', category: 'status', power: 0 },
+  'iron-head': { name: '铁头功', type: 'steel', category: 'physical', power: 80 },
+  'iron-tail': { name: '铁尾', type: 'steel', category: 'physical', power: 100 },
 
-  // ========== 飞行属性 ==========
-  'brave-bird': { name: '勇鸟猛攻', nameEn: 'Brave Bird', type: 'flying', category: 'physical', power: 120, accuracy: 100, pp: 15, priority: 0, note: '反弹伤害1/3' },
-  'airslash': { name: '空气斩', nameEn: 'Air Slash', type: 'flying', category: 'special', power: 75, accuracy: 95, pp: 15, priority: 0 },
-  'hurricane': { name: '暴风', nameEn: 'Hurricane', type: 'flying', category: 'special', power: 110, accuracy: 70, pp: 10, priority: 0, note: '降雨必中' },
-  'acrobatics': { name: '杂技', nameEn: 'Acrobatics', type: 'flying', category: 'physical', power: 55, accuracy: 100, pp: 15, priority: 0, note: '无道具时威力翻倍' },
-  'fly': { name: '飞翔', nameEn: 'Fly', type: 'flying', category: 'physical', power: 90, accuracy: 95, pp: 15, priority: 0 },
-  'dual-wingbeat': { name: '双翼', nameEn: 'Dual Wingbeat', type: 'flying', category: 'physical', power: 40, accuracy: 90, pp: 10, priority: 0, note: '命中2次' },
+  // K
+  'knock-off': { name: '拍落', type: 'dark', category: 'physical', power: 65 },
 
-  // ========== 超能力属性 ==========
-  'psychic': { name: '超能力', nameEn: 'Psychic', type: 'psychic', category: 'special', power: 90, accuracy: 100, pp: 10, priority: 0 },
-  'psyshock': { name: '精神冲击', nameEn: 'Psyshock', type: 'psychic', category: 'special', power: 80, accuracy: 100, pp: 10, priority: 0, note: '依据对方物理防御计算' },
-  'zen-headbutt': { name: '意念头锤', nameEn: 'Zen Headbutt', type: 'psychic', category: 'physical', power: 80, accuracy: 90, pp: 15, priority: 0 },
-  'expanding-force': { name: '广域战力', nameEn: 'Expanding Force', type: 'psychic', category: 'special', power: 80, accuracy: 100, pp: 10, priority: 0, note: '心灵场地威力×1.5且打全体' },
-  'psycho-cut': { name: '精神利刃', nameEn: 'Psycho Cut', type: 'psychic', category: 'physical', power: 70, accuracy: 100, pp: 20, priority: 0, note: '高击中要害率' },
-  'future-sight': { name: '预知未来', nameEn: 'Future Sight', type: 'psychic', category: 'special', power: 120, accuracy: 100, pp: 10, priority: 0, note: '2回合后触发' },
+  // L
+  'leaf-blade': { name: '叶刃', type: 'grass', category: 'physical', power: 90 },
+  'leaf-storm': { name: '飞叶风暴', type: 'grass', category: 'special', power: 130 },
+  'leaf-tornado': { name: '飞叶旋涡', type: 'grass', category: 'special', power: 65 },
+  'leech-life': { name: '吸血', type: 'bug', category: 'physical', power: 80 },
+  'leech-seed': { name: '寄生种子', type: 'grass', category: 'status', power: 0 },
+  'leer': { name: '可怕眼神', type: 'normal', category: 'status', power: 0 },
+  'lick': { name: '舔', type: 'ghost', category: 'physical', power: 30 },
+  'life-dew': { name: '命之水滴', type: 'water', category: 'status', power: 0 },
+  'light-screen': { name: '光之壁', type: 'psychic', category: 'status', power: 0 },
+  'liquidation': { name: '水流裂破', type: 'water', category: 'physical', power: 85 },
+  'low-kick': { name: '踢倒', type: 'fighting', category: 'physical', power: 0, note: '威力取决于目标体重，无法预先计算' },
+  'low-sweep': { name: '扫踢', type: 'fighting', category: 'physical', power: 65 },
+  'lunge': { name: '突进', type: 'bug', category: 'physical', power: 80 },
 
-  // ========== 虫属性 ==========
-  'bug-buzz': { name: '虫鸣', nameEn: 'Bug Buzz', type: 'bug', category: 'special', power: 90, accuracy: 100, pp: 10, priority: 0 },
-  'x-scissor': { name: '十字剪', nameEn: 'X-Scissor', type: 'bug', category: 'physical', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'leech-life': { name: '吸血', nameEn: 'Leech Life', type: 'bug', category: 'physical', power: 80, accuracy: 100, pp: 10, priority: 0 },
-  'first-impression': { name: '迎头一击', nameEn: 'First Impression', type: 'bug', category: 'physical', power: 90, accuracy: 100, pp: 10, priority: 2, note: '只能在刚出场时使用' },
+  // M
+  'mach-punch': { name: '子弹拳（格斗）', type: 'fighting', category: 'physical', power: 40 },
+  'magic-coat': { name: '魔法反射', type: 'psychic', category: 'status', power: 0 },
+  'magical-leaf': { name: '魔法叶', type: 'grass', category: 'special', power: 60 },
+  'magnet-rise': { name: '磁气浮游', type: 'electric', category: 'status', power: 0 },
+  'mega-drain': { name: '超级吸取', type: 'grass', category: 'special', power: 40 },
+  'mega-kick': { name: '超级踢', type: 'normal', category: 'physical', power: 120 },
+  'mega-punch': { name: '超级拳', type: 'normal', category: 'physical', power: 80 },
+  'megahorn': { name: '角冲击', type: 'bug', category: 'physical', power: 120 },
+  'metal-claw': { name: '钢爪', type: 'steel', category: 'physical', power: 50 },
+  'meteor-mash': { name: '流星拳', type: 'steel', category: 'physical', power: 90 },
+  'minimize': { name: '变小', type: 'normal', category: 'status', power: 0 },
+  'misty-terrain': { name: '薄雾场地', type: 'fairy', category: 'status', power: 0 },
+  'moonblast': { name: '月亮之力', type: 'fairy', category: 'special', power: 95 },
+  'moonlight': { name: '月光', type: 'fairy', category: 'status', power: 0 },
+  'morning-sun': { name: '朝阳', type: 'normal', category: 'status', power: 0 },
+  'mud-shot': { name: '泥巴射击', type: 'ground', category: 'special', power: 55 },
+  'mud-slap': { name: '泥巴掌', type: 'ground', category: 'special', power: 20 },
+  'muddy-water': { name: '泥浆炸弹', type: 'water', category: 'special', power: 90 },
 
-  // ========== 岩石属性 ==========
-  'stone-edge': { name: '尖石攻击', nameEn: 'Stone Edge', type: 'rock', category: 'physical', power: 100, accuracy: 80, pp: 5, priority: 0, note: '高击中要害率' },
-  'rock-slide': { name: '岩崩', nameEn: 'Rock Slide', type: 'rock', category: 'physical', power: 75, accuracy: 90, pp: 10, priority: 0 },
-  'power-gem': { name: '力量宝石', nameEn: 'Power Gem', type: 'rock', category: 'special', power: 80, accuracy: 100, pp: 20, priority: 0 },
-  'diamond-storm': { name: '钻石风暴', nameEn: 'Diamond Storm', type: 'rock', category: 'physical', power: 100, accuracy: 95, pp: 5, priority: 0 },
-  'head-smash': { name: '双刃头锤', nameEn: 'Head Smash', type: 'rock', category: 'physical', power: 150, accuracy: 80, pp: 5, priority: 0, note: '反弹伤害1/2' },
+  // N
+  'nasty-plot': { name: '坏计划', type: 'dark', category: 'status', power: 0 },
+  'night-daze': { name: '夜晚突袭', type: 'dark', category: 'special', power: 85 },
+  'night-shade': { name: '夜间阴影', type: 'ghost', category: 'special', power: 0, note: '伤害固定等于使用者等级' },
+  'night-slash': { name: '暗夜斩击', type: 'dark', category: 'physical', power: 70 },
 
-  // ========== 幽灵属性 ==========
-  'shadow-ball': { name: '暗影球', nameEn: 'Shadow Ball', type: 'ghost', category: 'special', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'shadow-claw': { name: '暗影爪', nameEn: 'Shadow Claw', type: 'ghost', category: 'physical', power: 70, accuracy: 100, pp: 15, priority: 0, note: '高击中要害率' },
-  'shadow-sneak': { name: '影子偷袭', nameEn: 'Shadow Sneak', type: 'ghost', category: 'physical', power: 40, accuracy: 100, pp: 30, priority: 1 },
-  'astral-barrage': { name: '星碎', nameEn: 'Astral Barrage', type: 'ghost', category: 'special', power: 120, accuracy: 100, pp: 5, priority: 0 },
-  'poltergeist': { name: '灵骚', nameEn: 'Poltergeist', type: 'ghost', category: 'physical', power: 110, accuracy: 90, pp: 5, priority: 0, note: '需要对方携带道具' },
-  'hex': { name: '祸不单行', nameEn: 'Hex', type: 'ghost', category: 'special', power: 65, accuracy: 100, pp: 10, priority: 0, note: '对方有异常状态时威力翻倍' },
+  // O
+  'outrage': { name: '逆鳞', type: 'dragon', category: 'physical', power: 120 },
+  'overheat': { name: '过热', type: 'fire', category: 'special', power: 130 },
 
-  // ========== 龙属性 ==========
-  'dragon-claw': { name: '龙爪', nameEn: 'Dragon Claw', type: 'dragon', category: 'physical', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'outrage': { name: '逆鳞', nameEn: 'Outrage', type: 'dragon', category: 'physical', power: 120, accuracy: 100, pp: 10, priority: 0, note: '2-3回合连续，结束后混乱' },
-  'draco-meteor': { name: '流星群', nameEn: 'Draco Meteor', type: 'dragon', category: 'special', power: 130, accuracy: 90, pp: 5, priority: 0, note: '使用后特攻-2' },
-  'dragon-pulse': { name: '龙之波动', nameEn: 'Dragon Pulse', type: 'dragon', category: 'special', power: 85, accuracy: 100, pp: 10, priority: 0 },
-  'dragon-rush': { name: '龙之俯冲', nameEn: 'Dragon Rush', type: 'dragon', category: 'physical', power: 100, accuracy: 75, pp: 10, priority: 0 },
-  'roaring-moon': { name: '月呼', nameEn: "Dragon's Wrath", type: 'dragon', category: 'physical', power: 120, accuracy: 100, pp: 10, priority: 0 },
-  'breaking-swipe': { name: '广域破坏', nameEn: 'Breaking Swipe', type: 'dragon', category: 'physical', power: 60, accuracy: 100, pp: 15, priority: 0, note: '对方攻击-1' },
+  // P
+  'pain-split': { name: '苦痛分担', type: 'normal', category: 'status', power: 0 },
+  'peck': { name: '啄', type: 'flying', category: 'physical', power: 35 },
+  'petal-blizzard': { name: '花瓣风暴', type: 'grass', category: 'physical', power: 90 },
+  'petal-dance': { name: '花瓣舞', type: 'grass', category: 'special', power: 120 },
+  'phantom-force': { name: '神出鬼没', type: 'ghost', category: 'physical', power: 90 },
+  'pin-missile': { name: '飞针', type: 'bug', category: 'physical', power: 25, hitMin: 2, hitMax: 5 },
+  'play-rough': { name: '乱打出招', type: 'fairy', category: 'physical', power: 90 },
+  'poison-fang': { name: '毒牙', type: 'poison', category: 'physical', power: 50 },
+  'poison-gas': { name: '毒气', type: 'poison', category: 'status', power: 0 },
+  'poison-jab': { name: '毒刺', type: 'poison', category: 'physical', power: 80 },
+  'poison-powder': { name: '毒粉', type: 'poison', category: 'status', power: 0 },
+  'poison-sting': { name: '毒针', type: 'poison', category: 'physical', power: 15 },
+  'pollen-puff': { name: '花粉球', type: 'bug', category: 'special', power: 90 },
+  'pound': { name: '拍击', type: 'normal', category: 'physical', power: 40 },
+  'powder-snow': { name: '粉雪', type: 'ice', category: 'special', power: 40 },
+  'power-gem': { name: '宝石能量', type: 'rock', category: 'special', power: 80 },
+  'power-whip': { name: '能量鞭', type: 'grass', category: 'physical', power: 120 },
+  'protect': { name: '守住', type: 'normal', category: 'status', power: 0 },
+  'psybeam': { name: '幻象光线', type: 'psychic', category: 'special', power: 65 },
+  'psychic': { name: '精神强念', type: 'psychic', category: 'special', power: 90 },
+  'psychic-terrain': { name: '精神场地', type: 'psychic', category: 'status', power: 0 },
+  'psyshock': { name: '精神冲击', type: 'psychic', category: 'special', power: 80 },
 
-  // ========== 恶属性 ==========
-  'crunch': { name: '咬碎', nameEn: 'Crunch', type: 'dark', category: 'physical', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'dark-pulse': { name: '恶之波动', nameEn: 'Dark Pulse', type: 'dark', category: 'special', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'knock-off': { name: '拍落', nameEn: 'Knock Off', type: 'dark', category: 'physical', power: 65, accuracy: 100, pp: 20, priority: 0, note: '对方持有道具时威力×1.5，打落对方道具' },
-  'foul-play': { name: '欺诈', nameEn: 'Foul Play', type: 'dark', category: 'physical', power: 95, accuracy: 100, pp: 15, priority: 0, note: '使用对方攻击值计算' },
-  'sucker-punch': { name: '突袭', nameEn: 'Sucker Punch', type: 'dark', category: 'physical', power: 70, accuracy: 100, pp: 5, priority: 1, note: '对方使用攻击招式时成功' },
-  'wicked-blow': { name: '暗冥强击', nameEn: 'Wicked Blow', type: 'dark', category: 'physical', power: 75, accuracy: 100, pp: 5, priority: 0, note: '必定击中要害' },
+  // Q
+  'quash': { name: '压制', type: 'dark', category: 'status', power: 0 },
+  'quick-attack': { name: '电光一闪', type: 'normal', category: 'physical', power: 40 },
 
-  // ========== 钢属性 ==========
-  'iron-head': { name: '铁头', nameEn: 'Iron Head', type: 'steel', category: 'physical', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'flash-cannon': { name: '加农光炮', nameEn: 'Flash Cannon', type: 'steel', category: 'special', power: 80, accuracy: 100, pp: 10, priority: 0 },
-  'meteor-mash': { name: '彗星拳', nameEn: 'Meteor Mash', type: 'steel', category: 'physical', power: 90, accuracy: 90, pp: 10, priority: 0 },
-  'heavy-slam': { name: '重磅冲撞', nameEn: 'Heavy Slam', type: 'steel', category: 'physical', power: 80, accuracy: 100, pp: 10, priority: 0, note: '威力依据体重差' },
-  'magnet-bomb': { name: '磁铁炸弹', nameEn: 'Magnet Bomb', type: 'steel', category: 'physical', power: 60, accuracy: 0, pp: 20, priority: 0, alwaysHit: true },
-  'doom-desire': { name: '破灭之愿', nameEn: 'Doom Desire', type: 'steel', category: 'special', power: 140, accuracy: 100, pp: 5, priority: 0, note: '2回合后触发' },
-  'sunsteel-strike': { name: '流星闪冲', nameEn: 'Sunsteel Strike', type: 'steel', category: 'physical', power: 100, accuracy: 100, pp: 5, priority: 0 },
+  // R
+  'rage-powder': { name: '愤怒粉', type: 'bug', category: 'status', power: 0 },
+  'rain-dance': { name: '下雨', type: 'water', category: 'status', power: 0 },
+  'rapid-spin': { name: '高速旋转', type: 'normal', category: 'physical', power: 50 },
+  'razor-leaf': { name: '飞叶切', type: 'grass', category: 'physical', power: 55 },
+  'recover': { name: '自我再生', type: 'normal', category: 'status', power: 0 },
+  'reflect': { name: '反射壁', type: 'psychic', category: 'status', power: 0 },
+  'rest': { name: '睡眠', type: 'psychic', category: 'status', power: 0 },
+  'roar': { name: '吼叫', type: 'normal', category: 'status', power: 0 },
+  'rock-blast': { name: '岩石爆击', type: 'rock', category: 'physical', power: 25, hitMin: 2, hitMax: 5 },
+  'rock-polish': { name: '磨光', type: 'rock', category: 'status', power: 0 },
+  'rock-slide': { name: '岩石崩落', type: 'rock', category: 'physical', power: 75 },
+  'rock-throw': { name: '投石', type: 'rock', category: 'physical', power: 50 },
+  'rock-tomb': { name: '岩石封锁', type: 'rock', category: 'physical', power: 60 },
+  'roost': { name: '羽栖', type: 'flying', category: 'status', power: 0 },
 
-  // ========== 妖精属性 ==========
-  'dazzling-gleam': { name: '魔法闪耀', nameEn: 'Dazzling Gleam', type: 'fairy', category: 'special', power: 80, accuracy: 100, pp: 10, priority: 0 },
-  'moonblast': { name: '月亮之力', nameEn: 'Moonblast', type: 'fairy', category: 'special', power: 95, accuracy: 100, pp: 15, priority: 0 },
-  'play-rough': { name: '嬉闹', nameEn: 'Play Rough', type: 'fairy', category: 'physical', power: 90, accuracy: 90, pp: 10, priority: 0 },
-  'spirit-break': { name: '灵魂冲击', nameEn: 'Spirit Break', type: 'fairy', category: 'physical', power: 75, accuracy: 100, pp: 15, priority: 0 },
-  'light-that-burns-the-sky': { name: '棱镜镭射', nameEn: 'Prismatic Laser', type: 'fairy', category: 'special', power: 140, accuracy: 100, pp: 5, priority: 0 },
-  'sparkling-aria': { name: '泡影的咏叹调', nameEn: 'Sparkling Aria', type: 'fairy', category: 'special', power: 90, accuracy: 100, pp: 10, priority: 0 },
+  // S
+  'safeguard': { name: '神秘守护', type: 'normal', category: 'status', power: 0 },
+  'sand-attack': { name: '沙土', type: 'ground', category: 'status', power: 0 },
+  'sandstorm': { name: '沙暴', type: 'rock', category: 'status', power: 0 },
+  'scald': { name: '热水', type: 'water', category: 'special', power: 80 },
+  'scary-face': { name: '可怕面孔', type: 'normal', category: 'status', power: 0 },
+  'scratch': { name: '抓', type: 'normal', category: 'physical', power: 40 },
+  'screech': { name: '叫声（降防）', type: 'normal', category: 'status', power: 0 },
+  'seed-bomb': { name: '种子炸弹', type: 'grass', category: 'physical', power: 80 },
+  'seismic-toss': { name: '地球抛', type: 'fighting', category: 'physical', power: 0, note: '伤害固定等于使用者等级' },
+  'self-destruct': { name: '自爆', type: 'normal', category: 'physical', power: 200 },
+  'shadow-ball': { name: '暗影球', type: 'ghost', category: 'special', power: 80 },
+  'shadow-claw': { name: '暗影爪', type: 'ghost', category: 'physical', power: 70 },
+  'shadow-punch': { name: '暗影拳', type: 'ghost', category: 'physical', power: 60 },
+  'shadow-sneak': { name: '暗影偷袭', type: 'ghost', category: 'physical', power: 40 },
+  'shell-smash': { name: '破壳', type: 'normal', category: 'status', power: 0 },
+  'sing': { name: '催眠歌声', type: 'normal', category: 'status', power: 0 },
+  'skull-bash': { name: '头锤（蓄力）', type: 'normal', category: 'physical', power: 130 },
+  'sky-attack': { name: '天空攻击', type: 'flying', category: 'physical', power: 140 },
+  'slack-off': { name: '偷懒', type: 'normal', category: 'status', power: 0 },
+  'slam': { name: '鞭打', type: 'normal', category: 'physical', power: 80 },
+  'slash': { name: '切割', type: 'normal', category: 'physical', power: 70 },
+  'sleep-powder': { name: '催眠粉', type: 'grass', category: 'status', power: 0 },
+  'sleep-talk': { name: '睡眠说话', type: 'normal', category: 'status', power: 0 },
+  'sludge': { name: '污泥', type: 'poison', category: 'special', power: 65 },
+  'sludge-bomb': { name: '污泥炸弹', type: 'poison', category: 'special', power: 90 },
+  'sludge-wave': { name: '污泥波', type: 'poison', category: 'special', power: 95 },
+  'smart-strike': { name: '智慧之角', type: 'steel', category: 'physical', power: 70 },
+  'smog': { name: '浓烟', type: 'poison', category: 'special', power: 30 },
+  'smokescreen': { name: '烟雾', type: 'normal', category: 'status', power: 0 },
+  'snarl': { name: '咆哮', type: 'dark', category: 'special', power: 55 },
+  'snore': { name: '鼾声攻击', type: 'normal', category: 'special', power: 50 },
+  'soft-boiled': { name: '生蛋', type: 'normal', category: 'status', power: 0 },
+  'solar-beam': { name: '日光束', type: 'grass', category: 'special', power: 120 },
+  'solar-blade': { name: '日光刃', type: 'grass', category: 'physical', power: 125 },
+  'spark': { name: '电花', type: 'electric', category: 'physical', power: 65 },
+  'spikes': { name: '撒菱', type: 'ground', category: 'status', power: 0 },
+  'spirit-break': { name: '精神崩坏', type: 'fairy', category: 'physical', power: 75 },
+  'spite': { name: '报怨', type: 'ghost', category: 'status', power: 0 },
+  'stealth-rock': { name: '隐形岩', type: 'rock', category: 'status', power: 0 },
+  'steel-wing': { name: '钢翼', type: 'steel', category: 'physical', power: 70 },
+  'sticky-web': { name: '黏黏网', type: 'bug', category: 'status', power: 0 },
+  'stockpile': { name: '存蓄', type: 'normal', category: 'status', power: 0 },
+  'stomp': { name: '踩踏', type: 'normal', category: 'physical', power: 65 },
+  'stone-edge': { name: '岩石利刃', type: 'rock', category: 'physical', power: 100 },
+  'stored-power': { name: '回力技', type: 'psychic', category: 'special', power: 20, note: '威力随能力等级提升而增加（base 20，每+1提升20），显示为基础威力' },
+  'strength': { name: '怒力', type: 'normal', category: 'physical', power: 80 },
+  'stun-spore': { name: '麻痹粉', type: 'grass', category: 'status', power: 0 },
+  'submission': { name: '自取灭亡', type: 'fighting', category: 'physical', power: 80 },
+  'substitute': { name: '替身', type: 'normal', category: 'status', power: 0 },
+  'sucker-punch': { name: '截击', type: 'dark', category: 'physical', power: 70 },
+  'sunny-day': { name: '大晴天', type: 'fire', category: 'status', power: 0 },
+  'super-fang': { name: '老鼠牙', type: 'normal', category: 'physical', power: 0, note: '伤害固定为目标当前HP的一半' },
+  'superpower': { name: '蛮力', type: 'fighting', category: 'physical', power: 120 },
+  'supersonic': { name: '超声波', type: 'normal', category: 'status', power: 0 },
+  'surf': { name: '冲浪', type: 'water', category: 'special', power: 90 },
+  'surging-strikes': { name: '水流连打', type: 'water', category: 'physical', power: 25, hitCount: 3, alwaysCrit: true },
+  'swagger': { name: '挑衅', type: 'normal', category: 'status', power: 0 },
+  'swallow': { name: '吞食', type: 'normal', category: 'status', power: 0 },
+  'sweet-kiss': { name: '妖艳之吻', type: 'fairy', category: 'status', power: 0 },
+  'sweet-scent': { name: '芳香', type: 'normal', category: 'status', power: 0 },
+  'swift': { name: '迅捷', type: 'normal', category: 'special', power: 60 },
+  'swords-dance': { name: '剑舞', type: 'normal', category: 'status', power: 0 },
+  'synthesis': { name: '光合作用', type: 'grass', category: 'status', power: 0 },
 
-  // ========== 飞行属性（补充） ==========
-  'air-slash': { name: '空气斩', nameEn: 'Air Slash', type: 'flying', category: 'special', power: 75, accuracy: 95, pp: 15, priority: 0 },
+  // T
+  'tackle': { name: '撞击', type: 'normal', category: 'physical', power: 40 },
+  'tail-slap': { name: '尾巴刮击', type: 'normal', category: 'physical', power: 25, hitMin: 2, hitMax: 5 },
+  'tail-whip': { name: '尾巴挥打', type: 'normal', category: 'status', power: 0 },
+  'tailwind': { name: '顺风', type: 'flying', category: 'status', power: 0 },
+  'take-down': { name: '舍身冲撞', type: 'normal', category: 'physical', power: 90 },
+  'taunt': { name: '挑拨', type: 'dark', category: 'status', power: 0 },
+  'tearful-look': { name: '泪眼汪汪', type: 'normal', category: 'status', power: 0 },
+  'thief': { name: '飞毛腿', type: 'dark', category: 'physical', power: 60 },
+  'thrash': { name: '大闹一番', type: 'normal', category: 'physical', power: 120 },
+  'thunder': { name: '雷', type: 'electric', category: 'special', power: 110 },
+  'thunder-fang': { name: '雷电牙', type: 'electric', category: 'physical', power: 65 },
+  'thunder-punch': { name: '雷电拳', type: 'electric', category: 'physical', power: 75 },
+  'thunder-shock': { name: '电击', type: 'electric', category: 'special', power: 40 },
+  'thunder-wave': { name: '电磁波', type: 'electric', category: 'status', power: 0 },
+  'thunderbolt': { name: '十万伏特', type: 'electric', category: 'special', power: 90 },
+  'tickle': { name: '挠痒痒', type: 'normal', category: 'status', power: 0 },
+  'torment': { name: '苦恼', type: 'dark', category: 'status', power: 0 },
+  'toxic': { name: '剧毒', type: 'poison', category: 'status', power: 0 },
+  'toxic-spikes': { name: '毒菱', type: 'poison', category: 'status', power: 0 },
+  'tri-attack': { name: '三重攻击', type: 'normal', category: 'special', power: 80 },
+  'trick': { name: '戏法', type: 'psychic', category: 'status', power: 0 },
+  'trick-room': { name: '技巧房间', type: 'psychic', category: 'status', power: 0 },
+  'triple-axel': { name: '三旋击', type: 'ice', category: 'physical', power: 20, tripleAxel: true },
 
-  // ========== 水属性（补充） ==========
-  'waterfall': { name: '攀瀑', nameEn: 'Waterfall', type: 'water', category: 'physical', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'aqua-tail': { name: '水流尾', nameEn: 'Aqua Tail', type: 'water', category: 'physical', power: 90, accuracy: 90, pp: 10, priority: 0 },
-  'muddy-water': { name: '浊流', nameEn: 'Muddy Water', type: 'water', category: 'special', power: 90, accuracy: 85, pp: 10, priority: 0 },
-  'surging-strikes': { name: '水流连打', nameEn: 'Surging Strikes', type: 'water', category: 'physical', power: 25, accuracy: 100, pp: 5, priority: 0, note: '必定命中3次，必定击中要害' },
+  // U
+  'u-turn': { name: 'U形转弯', type: 'bug', category: 'physical', power: 70 },
+  'uproar': { name: '吵闹', type: 'normal', category: 'special', power: 90 },
 
-  // ========== 草属性（补充） ==========
-  'leech-seed': { name: '寄生种子', nameEn: 'Leech Seed', type: 'grass', category: 'status', power: 0, accuracy: 90, pp: 10, priority: 0, note: '每回合吸取对方1/8 HP' },
-  'solar-beam': { name: '日光束', nameEn: 'Solar Beam', type: 'grass', category: 'special', power: 120, accuracy: 100, pp: 10, priority: 0, note: '晴天一回合发动' },
-  'grass-knot': { name: '打草结', nameEn: 'Grass Knot', type: 'grass', category: 'special', power: 0, accuracy: 100, pp: 20, priority: 0, note: '威力依据对方体重' },
-  'horn-leech': { name: '木角', nameEn: 'Horn Leech', type: 'grass', category: 'physical', power: 75, accuracy: 100, pp: 10, priority: 0, note: '回复造成伤害的50% HP' },
-  'flower-trick': { name: '千变万花', nameEn: 'Flower Trick', type: 'grass', category: 'physical', power: 70, accuracy: 0, pp: 10, priority: 0, note: '必定命中，必定击中要害' },
+  // V
+  'venoshock': { name: '毒液空射', type: 'poison', category: 'special', power: 65, conditionalPower: { boostedPower: 130, condition: 'targetPoisoned' }, note: '对方中毒时威力×2' },
+  'vine-whip': { name: '藤鞭', type: 'grass', category: 'physical', power: 45 },
+  'volt-switch': { name: '伏特换人', type: 'electric', category: 'special', power: 70 },
 
-  // ========== 超能力属性（补充） ==========
-  'extrasensory': { name: '神通力', nameEn: 'Extrasensory', type: 'psychic', category: 'special', power: 80, accuracy: 100, pp: 20, priority: 0 },
+  // W
+  'water-gun': { name: '水枪', type: 'water', category: 'special', power: 40 },
+  'water-pulse': { name: '水脉冲', type: 'water', category: 'special', power: 60 },
+  'water-spout': { name: '水柱', type: 'water', category: 'special', power: 150, note: '威力随使用者HP降低而减少（HP全满时150）' },
+  'waterfall': { name: '瀑布', type: 'water', category: 'physical', power: 80 },
+  'weather-ball': { name: '气象球', type: 'normal', category: 'special', power: 50 },
+  'whirlpool': { name: '漩涡', type: 'water', category: 'special', power: 35 },
+  'whirlwind': { name: '吹飞', type: 'normal', category: 'status', power: 0 },
+  'wide-guard': { name: '广域守护', type: 'rock', category: 'status', power: 0 },
+  'wild-charge': { name: '野蛮电击', type: 'electric', category: 'physical', power: 90 },
+  'will-o-wisp': { name: '鬼火', type: 'fire', category: 'status', power: 0 },
+  'wing-attack': { name: '翅膀攻击', type: 'flying', category: 'physical', power: 60 },
+  'wish': { name: '许愿', type: 'normal', category: 'status', power: 0 },
+  'withdraw': { name: '缩进壳', type: 'water', category: 'status', power: 0 },
+  'wood-hammer': { name: '木质棒', type: 'grass', category: 'physical', power: 120 },
+  'work-up': { name: '鼓舞干劲', type: 'normal', category: 'status', power: 0 },
+  'worry-seed': { name: '烦恼种子', type: 'grass', category: 'status', power: 0 },
+  'wrap': { name: '束缚', type: 'normal', category: 'physical', power: 15 },
 
-  // ========== 格斗属性（补充） ==========
-  'low-kick': { name: '踢倒', nameEn: 'Low Kick', type: 'fighting', category: 'physical', power: 0, accuracy: 100, pp: 20, priority: 0, note: '威力依据对方体重' },
-  'cross-chop': { name: '十字劈', nameEn: 'Cross Chop', type: 'fighting', category: 'physical', power: 100, accuracy: 80, pp: 5, priority: 0, note: '高击中要害率' },
-  'sacred-sword': { name: '圣剑', nameEn: 'Sacred Sword', type: 'fighting', category: 'physical', power: 90, accuracy: 100, pp: 15, priority: 0, note: '无视对方能力变化' },
-  'collision-course': { name: '全开猛撞', nameEn: 'Collision Course', type: 'fighting', category: 'physical', power: 100, accuracy: 100, pp: 5, priority: 0, note: '超效果时威力×1.33' },
-  'close-combat-bulk': { name: '近身战', nameEn: 'Close Combat', type: 'fighting', category: 'physical', power: 120, accuracy: 100, pp: 5, priority: 0 },
+  // X
+  'x-scissor': { name: 'X剪刀', type: 'bug', category: 'physical', power: 80 },
 
-  // ========== 恶属性（补充） ==========
-  'night-slash': { name: '暗袭要害', nameEn: 'Night Slash', type: 'dark', category: 'physical', power: 70, accuracy: 100, pp: 15, priority: 0, note: '高击中要害率' },
-  'darkest-lariat': { name: 'DD金勾臂', nameEn: 'Darkest Lariat', type: 'dark', category: 'physical', power: 85, accuracy: 100, pp: 10, priority: 0, note: '无视对方能力变化' },
-  'throat-chop': { name: '地狱突刺', nameEn: 'Throat Chop', type: 'dark', category: 'physical', power: 80, accuracy: 100, pp: 15, priority: 0 },
-  'parting-shot': { name: '抛下狠话', nameEn: 'Parting Shot', type: 'dark', category: 'status', power: 0, accuracy: 100, pp: 20, priority: 0, note: '对方攻击和特攻-1，然后换人' },
+  // Y
+  'yawn': { name: '哈欠', type: 'normal', category: 'status', power: 0 },
 
-  // ========== 幽灵属性（补充） ==========
-  'phantom-force': { name: '潜灵奇袭', nameEn: 'Phantom Force', type: 'ghost', category: 'physical', power: 90, accuracy: 100, pp: 10, priority: 0, note: '穿透守护' },
-  'spirit-shackle': { name: '缝影', nameEn: 'Spirit Shackle', type: 'ghost', category: 'physical', power: 80, accuracy: 100, pp: 10, priority: 0 },
+  // Z
+  'zen-headbutt': { name: '禅意头锤', type: 'psychic', category: 'physical', power: 80 },
 
-  // ========== 钢属性（补充） ==========
-  'iron-tail': { name: '铁尾', nameEn: 'Iron Tail', type: 'steel', category: 'physical', power: 100, accuracy: 75, pp: 15, priority: 0 },
-  'make-it-rain': { name: '淘金潮', nameEn: 'Make It Rain', type: 'steel', category: 'special', power: 120, accuracy: 100, pp: 5, priority: 0, note: '使用后特攻-1' },
-  'behemoth-bash': { name: '巨兽弹', nameEn: 'Behemoth Bash', type: 'steel', category: 'physical', power: 100, accuracy: 100, pp: 5, priority: 0 },
-  'behemoth-blade': { name: '巨兽斩', nameEn: 'Behemoth Blade', type: 'steel', category: 'physical', power: 100, accuracy: 100, pp: 5, priority: 0 },
-  'body-press': { name: '扑击', nameEn: 'Body Press', type: 'fighting', category: 'physical', power: 80, accuracy: 100, pp: 10, priority: 0, note: '使用防御值计算伤害' },
-  'gyro-ball': { name: '陀螺球', nameEn: 'Gyro Ball', type: 'steel', category: 'physical', power: 0, accuracy: 100, pp: 5, priority: 0, note: '速度越低威力越高，最高150' },
-
-  // ========== 妖精属性（补充） ==========
-  'mystical-fire': { name: '魔法火焰', nameEn: 'Mystical Fire', type: 'fire', category: 'special', power: 75, accuracy: 100, pp: 10, priority: 0, note: '使对方特攻-1' },
-
-  // ========== 龙属性（补充） ==========
-  'dragon-tail': { name: '龙尾', nameEn: 'Dragon Tail', type: 'dragon', category: 'physical', power: 60, accuracy: 90, pp: 10, priority: -6, note: '使对方强制换人' },
-  'dragon-darts': { name: '龙箭', nameEn: 'Dragon Darts', type: 'dragon', category: 'physical', power: 50, accuracy: 100, pp: 10, priority: 0, note: '命中2次' },
-  'electro-drift': { name: '闪电猛冲', nameEn: 'Electro Drift', type: 'electric', category: 'special', power: 100, accuracy: 100, pp: 5, priority: 0, note: '超效果时威力×1.33' },
-  'dynamax-cannon': { name: '极巨炮', nameEn: 'Dynamax Cannon', type: 'dragon', category: 'special', power: 100, accuracy: 100, pp: 5, priority: 0 },
-  'roaring-moon-move': { name: '龙啸', nameEn: "Roaring Moon's Wrath", type: 'dragon', category: 'physical', power: 120, accuracy: 100, pp: 10, priority: 0 },
-
-  // ========== 岩石属性（补充） ==========
-  'rock-blast': { name: '岩石爆击', nameEn: 'Rock Blast', type: 'rock', category: 'physical', power: 25, accuracy: 90, pp: 10, priority: 0, note: '2-5连击' },
-  'diamond-storm-2': { name: '钻石风暴', nameEn: 'Diamond Storm', type: 'rock', category: 'physical', power: 100, accuracy: 95, pp: 5, priority: 0 },
-
-  // ========== 毒属性（补充） ==========
-  'toxic': { name: '剧毒', nameEn: 'Toxic', type: 'poison', category: 'status', power: 0, accuracy: 90, pp: 10, priority: 0, note: '使对方进入重毒状态' },
-
-  // ========== 虫属性（补充） ==========
-  'megahorn': { name: '超级角击', nameEn: 'Megahorn', type: 'bug', category: 'physical', power: 120, accuracy: 85, pp: 10, priority: 0 },
-
-  // ========== 冰属性（补充） ==========
-  'triple-axel': { name: '三旋击', nameEn: 'Triple Axel', type: 'ice', category: 'physical', power: 20, accuracy: 90, pp: 10, priority: 0, note: '命中3次，每次威力递增20' },
-  'ice-fang': { name: '冰冻牙', nameEn: 'Ice Fang', type: 'ice', category: 'physical', power: 65, accuracy: 95, pp: 15, priority: 0 },
-  'ice-spinner': { name: '冰旋', nameEn: 'Ice Spinner', type: 'ice', category: 'physical', power: 80, accuracy: 100, pp: 15, priority: 0, note: '消除场地效果' },
-
-  // ========== 一般属性（补充） ==========
-  'agility': { name: '高速移动', nameEn: 'Agility', type: 'psychic', category: 'status', power: 0, accuracy: 0, pp: 30, priority: 0, note: '速度+2' },
-  'brick-break': { name: '劈瓦', nameEn: 'Brick Break', type: 'fighting', category: 'physical', power: 75, accuracy: 100, pp: 15, priority: 0, note: '破除反射壁/光墙' },
-  'bulk-up': { name: '健美', nameEn: 'Bulk Up', type: 'fighting', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '攻击+1，防御+1' },
-  'coil': { name: '盘蜷', nameEn: 'Coil', type: 'poison', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '攻击+1，防御+1，命中+1' },
-  'cosmic-power': { name: '宇宙力量', nameEn: 'Cosmic Power', type: 'psychic', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '防御+1，特防+1' },
-  'court-change': { name: '换场', nameEn: 'Court Change', type: 'normal', category: 'status', power: 0, accuracy: 100, pp: 10, priority: 0, note: '交换双方场地上的道具（隐形岩等）' },
-  'defog': { name: '清除浓雾', nameEn: 'Defog', type: 'flying', category: 'status', power: 0, accuracy: 0, pp: 15, priority: 0, note: '消除危险技，降低对方回避' },
-  'detect': { name: '看穿', nameEn: 'Detect', type: 'fighting', category: 'status', power: 0, accuracy: 0, pp: 5, priority: 4, note: '本回合免疫所有攻击（类守护）' },
-  'fake-out': { name: '击掌奇袭', nameEn: 'Fake Out', type: 'normal', category: 'physical', power: 40, accuracy: 100, pp: 10, priority: 3, note: '只能在刚出场时使用，使对方畏缩' },
-  'final-gambit': { name: '搏命', nameEn: 'Final Gambit', type: 'fighting', category: 'special', power: 0, accuracy: 100, pp: 5, priority: 0, note: '对对方造成等同于使用者HP的伤害，使用者HP归零' },
-  'follow-me': { name: '看我嘛', nameEn: 'Follow Me', type: 'normal', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 2, note: '使对方攻击集中到自身（双打专用）' },
-  'glare': { name: '大蛇瞪眼', nameEn: 'Glare', type: 'normal', category: 'status', power: 0, accuracy: 100, pp: 30, priority: 0, note: '使对方麻痹' },
-  'haze': { name: '黑雾', nameEn: 'Haze', type: 'ice', category: 'status', power: 0, accuracy: 0, pp: 30, priority: 0, note: '重置双方所有能力变化' },
-  'king-shield': { name: '王者盾牌', nameEn: 'King\'s Shield', type: 'steel', category: 'status', power: 0, accuracy: 0, pp: 10, priority: 4, note: '防御所有攻击，物理攻击使对方攻击-1' },
-  'light-screen': { name: '光墙', nameEn: 'Light Screen', type: 'psychic', category: 'status', power: 0, accuracy: 0, pp: 30, priority: 0, note: '己方特殊伤害减半，5回合' },
-  'morning-sun': { name: '晨光', nameEn: 'Morning Sun', type: 'normal', category: 'status', power: 0, accuracy: 0, pp: 5, priority: 0, note: '回复HP（晴天回复2/3）' },
-  'recover': { name: '自我再生', nameEn: 'Recover', type: 'normal', category: 'status', power: 0, accuracy: 0, pp: 5, priority: 0, note: '回复最大HP的50%' },
-  'reflect': { name: '反射壁', nameEn: 'Reflect', type: 'psychic', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '己方物理伤害减半，5回合' },
-  'roost': { name: '羽栖', nameEn: 'Roost', type: 'flying', category: 'status', power: 0, accuracy: 0, pp: 5, priority: 0, note: '回复最大HP的50%，本回合失去飞行属性' },
-  'slack-off': { name: '偷懒', nameEn: 'Slack Off', type: 'normal', category: 'status', power: 0, accuracy: 0, pp: 5, priority: 0, note: '回复最大HP的50%' },
-  'sleep-powder': { name: '催眠粉', nameEn: 'Sleep Powder', type: 'grass', category: 'status', power: 0, accuracy: 75, pp: 15, priority: 0, note: '使对方进入睡眠' },
-  'snipe-shot': { name: '狙击', nameEn: 'Snipe Shot', type: 'water', category: 'special', power: 80, accuracy: 100, pp: 15, priority: 0, note: '无视重定向效果，高击中要害率' },
-  'spikes': { name: '撒菱', nameEn: 'Spikes', type: 'ground', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '在对方场地设置撒菱' },
-  'synthesis': { name: '光合作用', nameEn: 'Synthesis', type: 'grass', category: 'status', power: 0, accuracy: 0, pp: 5, priority: 0, note: '回复HP（晴天回复2/3）' },
-  'u-turn': { name: '急速折返', nameEn: 'U-turn', type: 'bug', category: 'physical', power: 70, accuracy: 100, pp: 20, priority: 0, note: '攻击后换人' },
-  'wish': { name: '祈愿', nameEn: 'Wish', type: 'normal', category: 'status', power: 0, accuracy: 0, pp: 10, priority: 0, note: '下回合回复最大HP的50%' },
-  'baton-pass': { name: '接棒', nameEn: 'Baton Pass', type: 'normal', category: 'status', power: 0, accuracy: 0, pp: 40, priority: 0, note: '换人时保留能力变化' },
-  'baneful-bunker': { name: '碉堡', nameEn: 'Baneful Bunker', type: 'poison', category: 'status', power: 0, accuracy: 0, pp: 10, priority: 4, note: '防御所有攻击，接触攻击使对方中毒' },
-  'clangorous-soul': { name: '魂舞烈音爆', nameEn: 'Clangorous Soul', type: 'dragon', category: 'status', power: 0, accuracy: 0, pp: 5, priority: 0, note: '消耗1/3 HP，所有能力+1' },
-  'pyro-ball': { name: '火焰球', nameEn: 'Pyro Ball', type: 'fire', category: 'physical', power: 120, accuracy: 90, pp: 5, priority: 0 },
-  'torch-song': { name: '闪焰高歌', nameEn: 'Torch Song', type: 'fire', category: 'special', power: 80, accuracy: 100, pp: 10, priority: 0, note: '使用后特攻+1' },
-  'aqua-step': { name: '流水旋舞', nameEn: 'Aqua Step', type: 'water', category: 'physical', power: 80, accuracy: 100, pp: 10, priority: 0, note: '使用后速度+1' },
-  'rage-fist': { name: '愤怒之拳', nameEn: 'Rage Fist', type: 'ghost', category: 'physical', power: 50, accuracy: 100, pp: 10, priority: 0, note: '每次被攻击后本回合威力+50，最高350' },
-  'kowtow-cleave': { name: '仆刀', nameEn: 'Kowtow Cleave', type: 'dark', category: 'physical', power: 85, accuracy: 0, pp: 10, priority: 0, note: '必定命中' },
-
-  // ========== 钢属性（补充2） ==========
-  'bullet-punch': { name: '子弹拳', nameEn: 'Bullet Punch', type: 'steel', category: 'physical', power: 40, accuracy: 100, pp: 30, priority: 1 },
-
-  // ========== 格斗属性（补充2） ==========
-  'dynamic-punch': { name: '爆裂拳', nameEn: 'Dynamic Punch', type: 'fighting', category: 'physical', power: 100, accuracy: 50, pp: 5, priority: 0, note: '命中后使对方混乱' },
-
-  // ========== 一般属性（补充2） ==========
-  'moonlight': { name: '月光', nameEn: 'Moonlight', type: 'fairy', category: 'status', power: 0, accuracy: 0, pp: 5, priority: 0, note: '回复HP（晴天回复2/3，沙暴/冰雹回复1/4）' },
-  'signal-beam': { name: '信号光束', nameEn: 'Signal Beam', type: 'bug', category: 'special', power: 75, accuracy: 100, pp: 15, priority: 0 },
-  'sky-attack': { name: '神鸟猛击', nameEn: 'Sky Attack', type: 'flying', category: 'physical', power: 140, accuracy: 90, pp: 5, priority: 0, note: '蓄力1回合，30%使对方畏缩' },
-  'thunder-fang': { name: '雷电牙', nameEn: 'Thunder Fang', type: 'electric', category: 'physical', power: 65, accuracy: 95, pp: 15, priority: 0 },
-  'trick': { name: '戏法', nameEn: 'Trick', type: 'psychic', category: 'status', power: 0, accuracy: 100, pp: 10, priority: 0, note: '与对方交换持有道具' },
-
-  // ========== 变化招式（常用） ==========
-  'swords-dance': { name: '剑舞', nameEn: 'Swords Dance', type: 'normal', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '攻击+2' },
-  'nasty-plot': { name: '诡计', nameEn: 'Nasty Plot', type: 'dark', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '特攻+2' },
-  'calm-mind': { name: '冥想', nameEn: 'Calm Mind', type: 'psychic', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '特攻+1，特防+1' },
-  'dragon-dance': { name: '龙之舞', nameEn: 'Dragon Dance', type: 'dragon', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '攻击+1，速度+1' },
-  'quiver-dance': { name: '蝶舞', nameEn: 'Quiver Dance', type: 'bug', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '特攻+1，特防+1，速度+1' },
-  'protect': { name: '守住', nameEn: 'Protect', type: 'normal', category: 'status', power: 0, accuracy: 0, pp: 10, priority: 4, note: '本回合免疫所有攻击' },
-  'substitute': { name: '替身', nameEn: 'Substitute', type: 'normal', category: 'status', power: 0, accuracy: 0, pp: 10, priority: 0, note: '消耗25% HP创建替身' },
-  'trick-room': { name: '戏法空间', nameEn: 'Trick Room', type: 'psychic', category: 'status', power: 0, accuracy: 0, pp: 5, priority: -7, note: '翻转速度顺序，5回合' },
-  'tailwind': { name: '顺风', nameEn: 'Tailwind', type: 'flying', category: 'status', power: 0, accuracy: 0, pp: 15, priority: 0, note: '己方速度×2，4回合' },
-  'spore': { name: '蘑菇孢子', nameEn: 'Spore', type: 'grass', category: 'status', power: 0, accuracy: 100, pp: 15, priority: 0, note: '使对方进入睡眠' },
-  'thunder-wave': { name: '电磁波', nameEn: 'Thunder Wave', type: 'electric', category: 'status', power: 0, accuracy: 90, pp: 20, priority: 0, note: '使对方麻痹（速度×0.5）' },
-  'will-o-wisp': { name: '鬼火', nameEn: 'Will-O-Wisp', type: 'fire', category: 'status', power: 0, accuracy: 85, pp: 15, priority: 0, note: '使对方灼烧（物理攻击×0.5）' },
-  'stealth-rock': { name: '隐形岩', nameEn: 'Stealth Rock', type: 'rock', category: 'status', power: 0, accuracy: 0, pp: 20, priority: 0, note: '场地上设置隐形岩' },
-
-  // ── 特性联动相关技能（补充） ──────────────────────────────────
-
-  // 天气/场地联动
-  'weather-ball':  { name: '气象球',   nameEn: 'Weather Ball',  type: 'normal',  category: 'special',  power: 50,  accuracy: 100, pp: 10, priority: 0, note: '天气下属性变化+威力×2' },
-  'terrain-pulse': { name: '地形脉冲', nameEn: 'Terrain Pulse', type: 'normal',  category: 'special',  power: 50,  accuracy: 100, pp: 10, priority: 0, note: '场地下属性变化+威力×2' },
-  'solar-blade':   { name: '叶刃日炸', nameEn: 'Solar Blade',   type: 'grass',   category: 'physical', power: 125, accuracy: 100, pp: 10, priority: 0, note: '晴天一回合发动，非晴天威力减半' },
-
-  // 咬击系（强颚）
-  'bite':          { name: '咬住',   nameEn: 'Bite',          type: 'dark',    category: 'physical', power: 60,  accuracy: 100, pp: 25, priority: 0 },
-  'fire-fang':     { name: '火焰牙', nameEn: 'Fire Fang',     type: 'fire',    category: 'physical', power: 65,  accuracy: 95,  pp: 15, priority: 0 },
-  'poison-fang':   { name: '剧毒牙',   nameEn: 'Poison Fang',   type: 'poison',  category: 'physical', power: 50,  accuracy: 100, pp: 15, priority: 0 },
-  'psychic-fangs': { name: '精神之牙', nameEn: 'Psychic Fangs', type: 'psychic', category: 'physical', power: 85,  accuracy: 100, pp: 10, priority: 0, note: '破除反射壁/光墙' },
-  'fishious-rend': { name: '鳃咬', nameEn: 'Fishious Rend',   type: 'water',   category: 'physical', power: 85,  accuracy: 100, pp: 10, priority: 0, note: '先手时威力×2' },
-  'jaw-lock':      { name: '紧咬不放', nameEn: 'Jaw Lock',    type: 'dark',    category: 'physical', power: 80,  accuracy: 100, pp: 10, priority: 0, note: '使双方不能逃跑' },
-  'bug-bite':      { name: '虫咬', nameEn: 'Bug Bite',        type: 'bug',     category: 'physical', power: 60,  accuracy: 100, pp: 20, priority: 0 },
-
-  // 音波系（隔音）
-  'disarming-voice': { name: '迷人之声', nameEn: 'Disarming Voice', type: 'fairy',  category: 'special',  power: 40,  accuracy: 0,   pp: 15, priority: 0, alwaysHit: true },
-  'round':           { name: '合唱',   nameEn: 'Round',             type: 'normal', category: 'special',  power: 60,  accuracy: 100, pp: 15, priority: 0, note: '合唱时威力×2' },
-  'snore':           { name: '打鼾',   nameEn: 'Snore',             type: 'normal', category: 'special',  power: 50,  accuracy: 100, pp: 15, priority: 0, note: '仅睡眠时可用' },
-  'uproar':          { name: '吵闹',   nameEn: 'Uproar',            type: 'normal', category: 'special',  power: 90,  accuracy: 100, pp: 10, priority: 0, note: '2-5回合连续，阻止入眠' },
-  'snarl':           { name: '大声咆哮',   nameEn: 'Snarl',             type: 'dark',   category: 'special',  power: 55,  accuracy: 95,  pp: 15, priority: 0, note: '使对方特攻-1' },
-  'noble-roar':      { name: '战吼', nameEn: 'Noble Roar',      type: 'normal', category: 'status',   power: 0,   accuracy: 100, pp: 30, priority: 0, note: '使对方攻击/特攻-1' },
-  'relic-song':      { name: '古老之歌', nameEn: 'Relic Song',      type: 'normal', category: 'special',  power: 75,  accuracy: 100, pp: 10, priority: 0, note: '使对方入眠' },
-  'overdrive':       { name: '破音',   nameEn: 'Overdrive',         type: 'electric', category: 'special', power: 80, accuracy: 100, pp: 10, priority: 0 },
-  'clanging-scales': { name: '鳞片噪音', nameEn: 'Clanging Scales', type: 'dragon', category: 'special',  power: 110, accuracy: 100, pp: 5,  priority: 0, note: '使用后防御-1' },
-  'alluring-voice':  { name: '魅惑之声', nameEn: 'Alluring Voice', type: 'fairy',  category: 'special',  power: 80,  accuracy: 100, pp: 10, priority: 0 },
-
-  // 波动系（大炮手）
-  'water-pulse':   { name: '水之波动', nameEn: 'Water Pulse',   type: 'water',  category: 'special',  power: 60,  accuracy: 100, pp: 20, priority: 0 },
-
-  // 接触/拳击系
-  'aerial-ace':    { name: '燕返',   nameEn: 'Aerial Ace',   type: 'flying',   category: 'physical', power: 60,  accuracy: 0,   pp: 20, priority: 0, alwaysHit: true },
-  'focus-punch':   { name: '真气拳', nameEn: 'Focus Punch',  type: 'fighting', category: 'physical', power: 150, accuracy: 100, pp: 20, priority: -3, note: '受攻击即失败' },
-  'shadow-punch':  { name: '暗影拳', nameEn: 'Shadow Punch', type: 'ghost',    category: 'physical', power: 60,  accuracy: 0,   pp: 20, priority: 0, alwaysHit: true },
-
-  // 妖精系补充
-  'draining-kiss': { name: '吸取之吻', nameEn: 'Draining Kiss', type: 'fairy',  category: 'special',  power: 50,  accuracy: 100, pp: 10, priority: 0, note: '回复造成伤害的75%' },
-
-  // 岩石系补充
-  'ancient-power': { name: '原始之力', nameEn: 'Ancient Power', type: 'rock',  category: 'special',  power: 60,  accuracy: 100, pp: 5,  priority: 0, note: '10%使所有能力+1' },
+  // 特殊：千变万花（必定急所）
+  'flower-trick': { name: '千变万花', type: 'grass', category: 'physical', power: 70, alwaysCrit: true },
 };
-
-/**
- * 获取技能的实际威力（考虑特殊情况）
- * @param {string} moveId
- * @returns {number|null}
- */
-function getMovePower(moveId) {
-  const move = MOVES[moveId];
-  if (!move || move.category === 'status') return null;
-  return move.power;
-}

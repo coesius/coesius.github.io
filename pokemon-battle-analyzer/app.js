@@ -942,7 +942,11 @@ function runAnalysis() {
 
   // ---- 2. 我方输出伤害 ----
   const myMoves = mySlot.moves.filter(Boolean);
-  const myAtkStatus = { burned: AppState.battle.myStatus === 'burn' };
+  const myAtkStatus = {
+    burned:    AppState.battle.myStatus === 'burn',
+    paralyzed: AppState.battle.myStatus === 'paralysis',
+    poisoned:  AppState.battle.myStatus === 'poison' || AppState.battle.myStatus === 'bad-poison'
+  };
 
   const myAttacker = {
     pokemon: myPokemon,
@@ -958,7 +962,9 @@ function runAnalysis() {
   const myDamages = calcMyMoveDamages(myAttacker, oppPokemon, myMoves, field, myAtkStatus, {
     myAbility:              myAbilityId,
     defAbility:             oppAbilityId,
-    defPossibleAbilities:   oppPossibleAbils
+    defPossibleAbilities:   oppPossibleAbils,
+    oppStatus:              AppState.battle.oppStatus || '',
+    oppHalfHP:              AppState.battle.oppHalfHP || false
   });
 
   // ---- 3. 对方威胁技能 ----
@@ -980,7 +986,10 @@ function runAnalysis() {
     atkAbility:              oppAbilityId,
     atkPossibleAbilities:    oppPossibleAbils,
     myAbility:               myAbilityId,
-    atkItem:                 oppItemId
+    atkItem:                 oppItemId,
+    myStatus:                AppState.battle.myStatus  || '',
+    myHalfHP:                AppState.battle.myHalfHP  || false,
+    oppStatus:               AppState.battle.oppStatus || ''
   });
 
   // ---- 渲染结果 ----
@@ -1092,8 +1101,10 @@ function renderMyDamageSection(damages, _myPkm, oppPkm) {
             <span class="move-badge ${d.category === 'physical' ? 'cat-physical' : 'cat-special'}" style="font-size:0.7rem">
               ${d.category === 'physical' ? '物理' : '特殊'}
             </span>
-            <span style="font-size:0.75rem;color:var(--text-secondary)">威力${d.power}</span>
+            <span style="font-size:0.75rem;color:var(--text-secondary)">${buildPowerLabel(d)}</span>
           </div>
+          ${d.conditionalNote ? `<div style="font-size:0.7rem;color:var(--accent-yellow);margin-top:2px">⚡ ${d.conditionalNote}</div>` : ''}
+          ${d.alwaysCrit ? `<div style="font-size:0.7rem;color:var(--accent-blue);margin-top:2px">✦ 必定击中要害</div>` : ''}
         </td>
         ${d.results.map(r => renderDamageCell(r)).join('')}
       </tr>`;
@@ -1126,6 +1137,17 @@ function renderMyDamageSection(damages, _myPkm, oppPkm) {
         </table>
       </div>
     </div>`;
+}
+
+/**
+ * 构建威力标签文本（含多段命中、三旋击等格式）
+ */
+function buildPowerLabel(entry) {
+  if (entry.tripleAxel) return '威力20+40+60';
+  if (entry.hitCount)   return `威力${entry.power}×${entry.hitCount}次`;
+  if (entry.hitMin)     return `威力${entry.power}×${entry.hitMin}~${entry.hitMax}次`;
+  if (!entry.power)     return '威力—';
+  return `威力${entry.power}`;
 }
 
 function renderDamageCell(r) {
@@ -1186,10 +1208,12 @@ function renderThreatSection(threats, oppPkm, myPkm, myHP) {
           <span class="move-badge ${t.category === 'physical' ? 'cat-physical' : 'cat-special'}">
             ${t.category === 'physical' ? '物理' : '特殊'}
           </span>
-          <span class="threat-power">威力${t.power}</span>
+          <span class="threat-power">${buildPowerLabel(t)}</span>
           ${t.typeEff >= 2 ? `<span class="${getEffClass(t.typeEff)}">${getEffectivenessLabel(t.typeEff).text}</span>` : ''}
           ${isKO ? '<span class="ko-tag guaranteed">可能一击KO</span>' : ''}
           ${t.abilityNote ? `<span style="font-size:0.72rem;color:var(--accent-yellow)">${t.abilityNote}</span>` : ''}
+          ${t.conditionalNote ? `<span style="font-size:0.72rem;color:var(--accent-yellow)">⚡ ${t.conditionalNote}</span>` : ''}
+          ${t.alwaysCrit ? `<span style="font-size:0.72rem;color:var(--accent-blue)">✦必定急所</span>` : ''}
         </div>
         <div class="threat-dmg-grid">
           ${t.results.map(r => `

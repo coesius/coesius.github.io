@@ -192,6 +192,7 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
   const myAbilityId  = abilityInfo.myAbility  || '';
   const defAbilityId = abilityInfo.defAbility || '';
   const defPossible  = abilityInfo.defPossibleAbilities || [];
+  const oppStatus    = abilityInfo.oppStatus  || '';  // 对方异常状态（用于 hex/venoshock/brine）
 
   const results = [];
 
@@ -234,6 +235,31 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
     let   atkStat = isPhys ? attacker.stats.effective.atk : attacker.stats.effective.spa;
     if (atkAbilEff.atkStatMult) atkStat = Math.floor(atkStat * atkAbilEff.atkStatMult);
 
+    // ── 3b. 必定击中要害（alwaysCrit）：无视攻击方负面能力变化
+    const alwaysCrit = !!moveData.alwaysCrit;
+    if (alwaysCrit) {
+      const baseAtkStat = isPhys ? attacker.stats.base.atk : attacker.stats.base.spa;
+      atkStat = Math.max(baseAtkStat, atkStat);
+    }
+
+    // ── 3c. 条件威力（conditionalPower）
+    let conditionalNote = '';
+    if (moveData.conditionalPower) {
+      const { boostedPower, condition } = moveData.conditionalPower;
+      let condMet = false;
+      if (condition === 'targetHasStatus' && oppStatus && oppStatus !== 'none') condMet = true;
+      if (condition === 'targetPoisoned' && (oppStatus === 'poison' || oppStatus === 'bad-poison')) condMet = true;
+      if (condition === 'userHasStatus' && (atkStatus.burned || atkStatus.paralyzed || atkStatus.poisoned)) condMet = true;
+      if (condition === 'targetHalfHP' && abilityInfo.oppHalfHP) condMet = true;
+
+      if (condMet) {
+        effectPower = boostedPower;
+        conditionalNote = moveData.note || '条件威力触发';
+      } else {
+        conditionalNote = moveData.note || '';
+      }
+    }
+
     // ── 4. 基础属性相克（用于 filter/solid-rock 判断）
     const baseTypeEff = (typeof getTypeEffectiveness === 'function')
       ? getTypeEffectiveness(effectMoveType, defender.types) : 1;
@@ -245,7 +271,7 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
     }
 
     // ── 5. 单配置伤害计算函数（含防御方特性）
-    const computeDmg = (defCfg, defAbilEff) => {
+    const computeDmg = (defCfg, defAbilEff, powerOverride) => {
       if (defAbilEff && defAbilEff.immune) {
         const defHP = calcHP(defender.baseStats.hp, defCfg.hpSP);
         return { ...defCfg, min: 0, max: 0, minPct: 0, maxPct: 0,
@@ -273,11 +299,13 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
 
       const abilMult = (defAbilEff && defAbilEff.mult) ? defAbilEff.mult : 1;
 
+      const usePower = (powerOverride !== undefined) ? powerOverride : effectPower;
+
       const dmg = calcDamage({
         attackStat:  atkStat,
         defenseStat: finalDefStat,
         defenderHP:  defHP,
-        power:       effectPower,
+        power:       usePower,
         moveType:    effectMoveType,
         category:    moveData.category,
         atkTypes:    attacker.pokemon.types,
@@ -289,12 +317,13 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
           screen:          !!hasScreen,
           stabOverride:    atkAbilEff.stabOverride,
           abilityMult:     abilMult,
-          typeEffOverride: typeEffOverride
+          typeEffOverride: typeEffOverride,
+          isCrit:          alwaysCrit
         }
       });
 
       // 合并说明文本
-      const noteArr = [specialEff.note, atkAbilEff.note,
+      const noteArr = [specialEff.note, atkAbilEff.note, conditionalNote,
                        defAbilEff && defAbilEff.note, dmg.note].filter(Boolean);
       return { ...defCfg, ...dmg, hp: defHP, note: noteArr.join(' / ') || undefined };
     };
@@ -304,7 +333,51 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
       ? getDefAbilityEffect(defAbilityId, effectMoveType, moveData.category, moveId, flags, baseTypeEff)
       : {};
 
-    const moveResults = defConfigs.map(cfg => computeDmg(cfg, knownDefAbilEff));
+    let moveResults;
+
+    if (moveData.tripleAxel) {
+      // 三旋击：3次命中，威力分别为 20 / 40 / 60，合计 120
+      moveResults = defConfigs.map(cfg => {
+        const hits = [20, 40, 60].map(p => {
+          const r = computeDmg({ ...cfg, _powerOverride: p }, knownDefAbilEff, p);
+          return r;
+        });
+        const defHP   = hits[0].hp;
+        const totMin  = hits.reduce((s, h) => s + h.min, 0);
+        const totMax  = hits.reduce((s, h) => s + h.max, 0);
+        const minPct  = parseFloat((totMin / defHP * 100).toFixed(1));
+        const maxPct  = parseFloat((totMax / defHP * 100).toFixed(1));
+        return { ...cfg, ...hits[2], min: totMin, max: totMax, minPct, maxPct, hp: defHP };
+      });
+    } else if (moveData.hitCount || moveData.hitMin) {
+      // 固定多段 / 随机 2-5 段
+      moveResults = defConfigs.map(cfg => {
+        const single = computeDmg(cfg, knownDefAbilEff);
+        const defHP  = single.hp;
+
+        if (moveData.hitCount) {
+          const n = moveData.hitCount;
+          return {
+            ...cfg, ...single,
+            min: single.min * n, max: single.max * n,
+            minPct: parseFloat((single.min * n / defHP * 100).toFixed(1)),
+            maxPct: parseFloat((single.max * n / defHP * 100).toFixed(1)),
+            hp: defHP
+          };
+        } else {
+          const lo = moveData.hitMin, hi = moveData.hitMax;
+          return {
+            ...cfg, ...single,
+            min: single.min * lo, max: single.max * hi,
+            minPct: parseFloat((single.min * lo / defHP * 100).toFixed(1)),
+            maxPct: parseFloat((single.max * hi / defHP * 100).toFixed(1)),
+            hp: defHP
+          };
+        }
+      });
+    } else {
+      moveResults = defConfigs.map(cfg => computeDmg(cfg, knownDefAbilEff));
+    }
 
     // ── 7. 特性未知时，枚举有影响的特性形成情景
     let scenarios = [];
@@ -315,10 +388,42 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
       for (const { abilityId, effect } of variants) {
         const abilData = (defender.abilities || []).find(a => a.id === abilityId);
         const abilName = abilData ? abilData.name : abilityId;
+
+        let scenarioResults;
+        if (moveData.tripleAxel) {
+          scenarioResults = defConfigs.map(cfg => {
+            const hits = [20, 40, 60].map(p => computeDmg({ ...cfg, _powerOverride: p }, effect, p));
+            const defHP  = hits[0].hp;
+            const totMin = hits.reduce((s, h) => s + h.min, 0);
+            const totMax = hits.reduce((s, h) => s + h.max, 0);
+            return { ...cfg, ...hits[2], min: totMin, max: totMax,
+                     minPct: parseFloat((totMin / defHP * 100).toFixed(1)),
+                     maxPct: parseFloat((totMax / defHP * 100).toFixed(1)), hp: defHP };
+          });
+        } else if (moveData.hitCount || moveData.hitMin) {
+          scenarioResults = defConfigs.map(cfg => {
+            const single = computeDmg(cfg, effect);
+            const defHP  = single.hp;
+            if (moveData.hitCount) {
+              const n = moveData.hitCount;
+              return { ...cfg, ...single, min: single.min * n, max: single.max * n,
+                       minPct: parseFloat((single.min * n / defHP * 100).toFixed(1)),
+                       maxPct: parseFloat((single.max * n / defHP * 100).toFixed(1)), hp: defHP };
+            } else {
+              const lo = moveData.hitMin, hi = moveData.hitMax;
+              return { ...cfg, ...single, min: single.min * lo, max: single.max * hi,
+                       minPct: parseFloat((single.min * lo / defHP * 100).toFixed(1)),
+                       maxPct: parseFloat((single.max * hi / defHP * 100).toFixed(1)), hp: defHP };
+            }
+          });
+        } else {
+          scenarioResults = defConfigs.map(cfg => computeDmg(cfg, effect));
+        }
+
         scenarios.push({
           abilityId,
           abilityName: abilName,
-          results: defConfigs.map(cfg => computeDmg(cfg, effect))
+          results: scenarioResults
         });
       }
     }
@@ -332,6 +437,14 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
       power:        effectPower,
       results:      moveResults
     };
+    if (moveData.hitCount) entry.hitCount = moveData.hitCount;
+    if (moveData.hitMin)   { entry.hitMin = moveData.hitMin; entry.hitMax = moveData.hitMax; }
+    if (moveData.tripleAxel) entry.tripleAxel = true;
+    if (alwaysCrit)          entry.alwaysCrit = true;
+    // 条件威力：条件未触发时，附加备注供 UI 提示
+    if (moveData.conditionalPower && moveData.note && conditionalNote === moveData.note) {
+      entry.conditionalNote = moveData.note;
+    }
     if (scenarios.length > 0) entry.scenarios = scenarios;
     results.push(entry);
   }
@@ -354,6 +467,8 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
   const oppPossibleAbils   = abilityInfo.atkPossibleAbilities || [];
   const myAbilityId        = abilityInfo.myAbility           || '';
   const atkItem            = abilityInfo.atkItem             || '';
+  const myStatus           = abilityInfo.myStatus            || '';  // 我方异常状态
+  const oppStatus          = abilityInfo.oppStatus           || '';  // 对方异常状态（我方攻击条件）
 
   const threats = [];
 
@@ -380,7 +495,13 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
     let effectMoveType = specialEff.newType  || moveData.type;
     let effectPower    = specialEff.newPower || moveData.power;
 
-    if (!effectPower || effectPower < minPower) continue;
+    // 多段命中：用有效最大总威力来判断阈值（避免 25×5 被误过滤）
+    let effectiveTotalPower = effectPower;
+    if (moveData.hitCount) effectiveTotalPower = effectPower * moveData.hitCount;
+    else if (moveData.hitMax) effectiveTotalPower = effectPower * moveData.hitMax;
+    else if (moveData.tripleAxel) effectiveTotalPower = 120;
+
+    if (!effectiveTotalPower || effectiveTotalPower < minPower) continue;
 
     // ── 2. 技能标签
     const flags = (typeof getMoveFlags === 'function')
@@ -414,6 +535,29 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
     if (oppAbilEff.newType)  effectMoveType = oppAbilEff.newType;
     if (oppAbilEff.powerMult && oppAbilEff.powerMult !== 1)
       effectPower = Math.floor(effectPower * oppAbilEff.powerMult);
+
+    // ── 3b. 条件威力（对方的 hex/facade 等）
+    let oppCondNote = '';
+    if (moveData.conditionalPower) {
+      const { boostedPower, condition } = moveData.conditionalPower;
+      let condMet = false;
+      // hex/venoshock 系：我方（目标）有异常状态
+      if (condition === 'targetHasStatus' && myStatus && myStatus !== 'none') condMet = true;
+      if (condition === 'targetPoisoned' && (myStatus === 'poison' || myStatus === 'bad-poison')) condMet = true;
+      // facade：攻击方（对方）自身有异常状态
+      if (condition === 'userHasStatus' && oppStatus && oppStatus !== 'none') condMet = true;
+      // brine：目标（我方）HP ≤ 50%
+      if (condition === 'targetHalfHP' && abilityInfo.myHalfHP) condMet = true;
+
+      if (condMet) {
+        effectPower = boostedPower;
+        oppCondNote = moveData.note || '条件威力触发';
+      } else if (moveData.note) {
+        oppCondNote = moveData.note;
+      }
+    }
+
+    // ── 3c. 多段命中时，对威力阈值的二次检查（已在上方处理，此处跳过）
 
     const isPhys   = moveData.category === 'physical';
     const defBase  = isPhys ? attacker.baseStats.atk : attacker.baseStats.spa;
@@ -454,16 +598,22 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
       ? (myScreens.reflect || myScreens.auroraVeil)
       : (myScreens.lightScreen || myScreens.auroraVeil);
 
-    const computeOppDmg = (atkCfg, itemDamageMult, itemStatMult) => {
+    const computeOppDmg = (atkCfg, itemDamageMult, itemStatMult, powerOverride) => {
       let oppAtkStat = calcStat(defBase, atkCfg.atkSP, atkCfg.natureMult);
       if (oppAbilEff.atkStatMult) oppAtkStat = Math.floor(oppAtkStat * oppAbilEff.atkStatMult);
       if (itemStatMult !== 1)     oppAtkStat = Math.floor(oppAtkStat * itemStatMult);
+
+      const usePower = (powerOverride !== undefined) ? powerOverride : effectPower;
+      const isAlwaysCrit = !!moveData.alwaysCrit;
+      if (isAlwaysCrit) {
+        // 必定急所：无视对方负面能力变化（此处为对方攻击，无负面能力变化场景，直接使用 oppAtkStat）
+      }
 
       const dmg = calcDamage({
         attackStat:  oppAtkStat,
         defenseStat: myDefStat,
         defenderHP:  myHP,
-        power:       effectPower,
+        power:       usePower,
         moveType:    effectMoveType,
         category:    moveData.category,
         atkTypes:    attacker.types,
@@ -474,17 +624,50 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
           itemMult:     itemDamageMult,
           screen:       !!hasScreen,
           stabOverride: oppAbilEff.stabOverride,
-          abilityMult:  myDefAbilMult
+          abilityMult:  myDefAbilMult,
+          isCrit:       isAlwaysCrit
         }
       });
       return dmg;
     };
 
-    const moveResults = [];
-    for (const atkCfg of atkConfigs) {
-      const dmg = computeOppDmg(atkCfg, knownItemDamageMult, knownItemStatMult);
-      const noteArr = [specialEff.note, abilityNote, myAbilDefEff.note, dmg.note].filter(Boolean);
-      moveResults.push({ ...atkCfg, ...dmg, note: noteArr.join(' / ') || undefined });
+    // 多段命中的总伤害计算
+    let moveResults = [];
+    if (moveData.tripleAxel) {
+      for (const atkCfg of atkConfigs) {
+        const hits = [20, 40, 60].map(p => computeOppDmg(atkCfg, knownItemDamageMult, knownItemStatMult, p));
+        const totMin = hits.reduce((s, h) => s + h.min, 0);
+        const totMax = hits.reduce((s, h) => s + h.max, 0);
+        const noteArr = [specialEff.note, abilityNote, oppCondNote, myAbilDefEff.note, hits[0].note].filter(Boolean);
+        moveResults.push({ ...atkCfg, ...hits[2], min: totMin, max: totMax,
+          minPct: parseFloat((totMin / myHP * 100).toFixed(1)),
+          maxPct: parseFloat((totMax / myHP * 100).toFixed(1)),
+          note: noteArr.join(' / ') || undefined });
+      }
+    } else if (moveData.hitCount || moveData.hitMin) {
+      for (const atkCfg of atkConfigs) {
+        const single = computeOppDmg(atkCfg, knownItemDamageMult, knownItemStatMult);
+        const noteArr = [specialEff.note, abilityNote, oppCondNote, myAbilDefEff.note, single.note].filter(Boolean);
+        if (moveData.hitCount) {
+          const n = moveData.hitCount;
+          moveResults.push({ ...atkCfg, ...single, min: single.min * n, max: single.max * n,
+            minPct: parseFloat((single.min * n / myHP * 100).toFixed(1)),
+            maxPct: parseFloat((single.max * n / myHP * 100).toFixed(1)),
+            note: noteArr.join(' / ') || undefined });
+        } else {
+          const lo = moveData.hitMin, hi = moveData.hitMax;
+          moveResults.push({ ...atkCfg, ...single, min: single.min * lo, max: single.max * hi,
+            minPct: parseFloat((single.min * lo / myHP * 100).toFixed(1)),
+            maxPct: parseFloat((single.max * hi / myHP * 100).toFixed(1)),
+            note: noteArr.join(' / ') || undefined });
+        }
+      }
+    } else {
+      for (const atkCfg of atkConfigs) {
+        const dmg = computeOppDmg(atkCfg, knownItemDamageMult, knownItemStatMult);
+        const noteArr = [specialEff.note, abilityNote, oppCondNote, myAbilDefEff.note, dmg.note].filter(Boolean);
+        moveResults.push({ ...atkCfg, ...dmg, note: noteArr.join(' / ') || undefined });
+      }
     }
 
     // ── 9. 道具未知时，枚举该属性强化道具的情景
@@ -492,10 +675,37 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
     if (!atkItem && typeof getTypeBoostItem === 'function') {
       const boostItem = getTypeBoostItem(effectMoveType);
       if (boostItem) {
-        const scenarioResults = atkConfigs.map(atkCfg => {
-          const dmg = computeOppDmg(atkCfg, 1.2, 1);
-          return { ...atkCfg, ...dmg };
-        });
+        let scenarioResults = [];
+        if (moveData.tripleAxel) {
+          for (const atkCfg of atkConfigs) {
+            const hits = [20, 40, 60].map(p => computeOppDmg(atkCfg, 1.2, 1, p));
+            const totMin = hits.reduce((s, h) => s + h.min, 0);
+            const totMax = hits.reduce((s, h) => s + h.max, 0);
+            scenarioResults.push({ ...atkCfg, ...hits[2], min: totMin, max: totMax,
+              minPct: parseFloat((totMin / myHP * 100).toFixed(1)),
+              maxPct: parseFloat((totMax / myHP * 100).toFixed(1)) });
+          }
+        } else if (moveData.hitCount || moveData.hitMin) {
+          for (const atkCfg of atkConfigs) {
+            const single = computeOppDmg(atkCfg, 1.2, 1);
+            if (moveData.hitCount) {
+              const n = moveData.hitCount;
+              scenarioResults.push({ ...atkCfg, ...single, min: single.min * n, max: single.max * n,
+                minPct: parseFloat((single.min * n / myHP * 100).toFixed(1)),
+                maxPct: parseFloat((single.max * n / myHP * 100).toFixed(1)) });
+            } else {
+              const lo = moveData.hitMin, hi = moveData.hitMax;
+              scenarioResults.push({ ...atkCfg, ...single, min: single.min * lo, max: single.max * hi,
+                minPct: parseFloat((single.min * lo / myHP * 100).toFixed(1)),
+                maxPct: parseFloat((single.max * hi / myHP * 100).toFixed(1)) });
+            }
+          }
+        } else {
+          scenarioResults = atkConfigs.map(atkCfg => {
+            const dmg = computeOppDmg(atkCfg, 1.2, 1);
+            return { ...atkCfg, ...dmg };
+          });
+        }
         itemScenario = {
           itemId:   boostItem.itemId,
           itemName: boostItem.itemName,
@@ -517,7 +727,12 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
       abilityNote,
       itemScenario,
       results:     moveResults,
-      threatScore: maxThreat.maxPct
+      threatScore: maxThreat.maxPct,
+      ...(moveData.hitCount && { hitCount: moveData.hitCount }),
+      ...(moveData.hitMin && { hitMin: moveData.hitMin, hitMax: moveData.hitMax }),
+      ...(moveData.tripleAxel && { tripleAxel: true }),
+      ...(moveData.alwaysCrit && { alwaysCrit: true }),
+      ...(oppCondNote && effectPower === moveData.power && { conditionalNote: oppCondNote })
     });
   }
 
