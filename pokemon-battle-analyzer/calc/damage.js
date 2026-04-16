@@ -166,8 +166,8 @@ function calcTerrainMult(moveType, terrain, grounded = true, atkTypes = [], defT
  */
 function buildDamageNote(typeEff, stab, weatherMult, terrainMult, burnMult, critMult) {
   const notes = [];
-  if (typeEff >= 4) notes.push('效果极佳★');
-  else if (typeEff >= 2) notes.push('效果拔群');
+  if (typeEff >= 4) notes.push('效果无比绝佳');
+  else if (typeEff >= 2) notes.push('效果绝佳');
   else if (typeEff <= 0.25) notes.push('效果极差');
   else if (typeEff <= 0.5) notes.push('效果不好');
   if (stab > 1) notes.push('本系加成');
@@ -353,6 +353,7 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
   const oppAbilityId       = abilityInfo.atkAbility         || '';
   const oppPossibleAbils   = abilityInfo.atkPossibleAbilities || [];
   const myAbilityId        = abilityInfo.myAbility           || '';
+  const atkItem            = abilityInfo.atkItem             || '';
 
   const threats = [];
 
@@ -437,16 +438,26 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
 
     const myDefAbilMult = myAbilDefEff.mult || 1;
 
-    // ── 7. 计算三种进攻配置
-    const moveResults = [];
-    for (const atkCfg of atkConfigs) {
+    // ── 7. 道具修正（已知道具）
+    const knownItemDamageMult = atkItem
+      ? (typeof getItemDamageMult === 'function'
+          ? getItemDamageMult(atkItem, moveData.category, effectMoveType, typeEff) : 1)
+      : 1;
+    const knownItemStatMult = atkItem
+      ? (typeof getItemStatMult === 'function'
+          ? getItemStatMult(atkItem, moveData.category) : 1)
+      : 1;
+
+    // ── 8. 计算三种进攻配置
+    const myScreens = field.myScreens || {};
+    const hasScreen = isPhys
+      ? (myScreens.reflect || myScreens.auroraVeil)
+      : (myScreens.lightScreen || myScreens.auroraVeil);
+
+    const computeOppDmg = (atkCfg, itemDamageMult, itemStatMult) => {
       let oppAtkStat = calcStat(defBase, atkCfg.atkSP, atkCfg.natureMult);
       if (oppAbilEff.atkStatMult) oppAtkStat = Math.floor(oppAtkStat * oppAbilEff.atkStatMult);
-
-      const myScreens = field.myScreens || {};
-      const hasScreen = isPhys
-        ? (myScreens.reflect || myScreens.auroraVeil)
-        : (myScreens.lightScreen || myScreens.auroraVeil);
+      if (itemStatMult !== 1)     oppAtkStat = Math.floor(oppAtkStat * itemStatMult);
 
       const dmg = calcDamage({
         attackStat:  oppAtkStat,
@@ -460,14 +471,37 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
         field,
         atkStatus:   {},
         modifiers: {
+          itemMult:     itemDamageMult,
           screen:       !!hasScreen,
           stabOverride: oppAbilEff.stabOverride,
           abilityMult:  myDefAbilMult
         }
       });
+      return dmg;
+    };
 
+    const moveResults = [];
+    for (const atkCfg of atkConfigs) {
+      const dmg = computeOppDmg(atkCfg, knownItemDamageMult, knownItemStatMult);
       const noteArr = [specialEff.note, abilityNote, myAbilDefEff.note, dmg.note].filter(Boolean);
       moveResults.push({ ...atkCfg, ...dmg, note: noteArr.join(' / ') || undefined });
+    }
+
+    // ── 9. 道具未知时，枚举该属性强化道具的情景
+    let itemScenario = null;
+    if (!atkItem && typeof getTypeBoostItem === 'function') {
+      const boostItem = getTypeBoostItem(effectMoveType);
+      if (boostItem) {
+        const scenarioResults = atkConfigs.map(atkCfg => {
+          const dmg = computeOppDmg(atkCfg, 1.2, 1);
+          return { ...atkCfg, ...dmg };
+        });
+        itemScenario = {
+          itemId:   boostItem.itemId,
+          itemName: boostItem.itemName,
+          results:  scenarioResults
+        };
+      }
     }
 
     const maxThreat = moveResults[moveResults.length - 1];
@@ -481,6 +515,7 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
       power:       effectPower,
       typeEff,
       abilityNote,
+      itemScenario,
       results:     moveResults,
       threatScore: maxThreat.maxPct
     });

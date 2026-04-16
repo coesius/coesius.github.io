@@ -975,10 +975,12 @@ function runAnalysis() {
     stats: myStats_forDef
   };
 
+  const oppItemId = document.getElementById('opp-item-select')?.value || '';
   const threats = calcOpponentThreats(myDefender, oppPokemon, oppPokemon.moves || [], field, 60, {
     atkAbility:              oppAbilityId,
     atkPossibleAbilities:    oppPossibleAbils,
-    myAbility:               myAbilityId
+    myAbility:               myAbilityId,
+    atkItem:                 oppItemId
   });
 
   // ---- 渲染结果 ----
@@ -1198,6 +1200,19 @@ function renderThreatSection(threats, oppPkm, myPkm, myHP) {
               </div>
             </div>`).join('')}
         </div>
+        ${t.itemScenario ? `
+        <div class="item-scenario-row">
+          <div class="item-scenario-label">📦 携带${t.itemScenario.itemName}</div>
+          <div class="threat-dmg-grid">
+            ${t.itemScenario.results.map(r => `
+              <div class="threat-dmg-item">
+                <div class="threat-dmg-label">${r.label}</div>
+                <div class="threat-dmg-value ${r.maxPct >= 100 ? 'dmg-pct ko' : r.maxPct >= 70 ? 'dmg-pct high' : r.maxPct >= 40 ? 'dmg-pct mid' : 'dmg-pct low'}">
+                  ${r.minPct}%~${r.maxPct}%
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
       </div>`;
   }).join('');
 

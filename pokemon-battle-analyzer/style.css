@@ -1055,3 +1055,18 @@ body {
   font-style: italic;
   padding-left: 8px;
 }
+
+.item-scenario-row {
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: rgba(180, 130, 60, 0.08);
+  border-top: 1px dashed var(--border-default);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.item-scenario-label {
+  font-size: 0.75rem;
+  color: var(--accent-yellow);
+  font-style: italic;
+  margin-bottom: var(--spacing-xs);
+}

@@ -148,12 +148,10 @@ function generateSpeedConfigs(baseSpe, knownInfo = {}) {
   for (const ability of abilityOptions) {
     for (const sp of spValues) {
       for (const nat of natureOptions) {
-        // 减速性格不投SP、不携带讲究围巾
-        if (nat.key === 'reduce' && sp > 0) continue;
-
         const baseStat = calcStat(baseSpe, sp, nat.mult);
 
         for (const item of itemOptions) {
+          // 减速性格不携带讲究围巾
           if (nat.key === 'reduce' && item.id === 'choice-scarf') continue;
 
           for (const tailwind of tailwindOptions) {

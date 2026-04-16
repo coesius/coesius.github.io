@@ -99,3 +99,17 @@ function getItemStatMult(itemId, category) {
   if (item.spdMult && category === 'special_defense')  return item.spdMult;
   return 1;
 }
+
+/**
+ * 根据技能属性查找对应的属性强化道具（×1.2 typeMult 类）
+ * @param {string} moveType
+ * @returns {{ itemId: string, itemName: string } | null}
+ */
+function getTypeBoostItem(moveType) {
+  for (const [id, item] of Object.entries(ITEMS)) {
+    if (item.typeMult && item.type === moveType) {
+      return { itemId: id, itemName: item.name };
+    }
+  }
+  return null;
+}

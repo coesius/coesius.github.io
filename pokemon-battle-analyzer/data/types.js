@@ -68,7 +68,7 @@ function getEffectivenessLabel(mult) {
   if (mult === 0) return { text: '无效', class: 'immune' };
   if (mult <= 0.25) return { text: '效果极差', class: 'not-effective-2' };
   if (mult <= 0.5) return { text: '效果不好', class: 'not-effective' };
-  if (mult >= 4) return { text: '效果极佳★', class: 'super-effective-2' };
-  if (mult >= 2) return { text: '效果拔群', class: 'super-effective' };
+  if (mult >= 4) return { text: '效果无比绝佳', class: 'super-effective-2' };
+  if (mult >= 2) return { text: '效果绝佳', class: 'super-effective' };
   return { text: '普通效果', class: 'normal-effective' };
 }
