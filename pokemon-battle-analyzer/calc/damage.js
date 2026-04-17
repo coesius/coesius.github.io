@@ -174,8 +174,56 @@ function buildDamageNote(typeEff, stab, weatherMult, terrainMult, burnMult, crit
   if (weatherMult > 1) notes.push('天气加成');
   if (terrainMult > 1) notes.push('场地加成');
   if (burnMult < 1) notes.push('灼烧减半');
-  if (critMult > 1) notes.push('急所');
+  if (critMult > 1) notes.push('命中要害');
   return notes.join(' / ');
+}
+
+// ─── 动态威力辅助函数 ───
+
+/**
+ * 扑击/逆境反击 威力表（按HP比例）
+ */
+function flailPower(hpRatio) {
+  if (hpRatio > 0.6875) return 20;
+  if (hpRatio > 0.3542) return 40;
+  if (hpRatio > 0.2083) return 80;
+  if (hpRatio > 0.1042) return 100;
+  if (hpRatio > 0.0417) return 150;
+  return 200;
+}
+
+/**
+ * 电球威力（按攻击方速度 / 防御方速度 比值）
+ */
+function getElectroBallPower(atkSpe, defSpe) {
+  if (!defSpe || defSpe === 0) return 40;
+  const ratio = atkSpe / defSpe;
+  if (ratio >= 4) return 150;
+  if (ratio >= 3) return 120;
+  if (ratio >= 2) return 80;
+  if (ratio >  1) return 60;
+  return 40;
+}
+
+/** 打草结/踢倒威力（按目标体重） */
+function getWeightBasedPower(targetWeight) {
+  if (targetWeight >= 200) return 120;
+  if (targetWeight >= 100) return 100;
+  if (targetWeight >= 50)  return 80;
+  if (targetWeight >= 25)  return 60;
+  if (targetWeight >= 10)  return 40;
+  return 20;
+}
+
+/** 重磅冲撞/热力碰撞威力（按攻击方/目标体重比） */
+function getHeavySlamPower(atkWeight, defWeight) {
+  if (!defWeight || defWeight === 0) return 40;
+  const ratio = atkWeight / defWeight;
+  if (ratio >= 5) return 120;
+  if (ratio >= 4) return 100;
+  if (ratio >= 3) return 80;
+  if (ratio >= 2) return 60;
+  return 40;
 }
 
 /**
@@ -215,6 +263,74 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
     let effectMoveType = specialEff.newType  || moveData.type;
     let effectPower    = specialEff.newPower || moveData.power;
 
+    // ── 1b. 动态威力计算
+    let dynamicNote = '';
+    if (moveData.dynamicPower) {
+      const atkSpe  = attacker.stats.effective.spe;
+      const defSpe  = (typeof calcStat === 'function')
+        ? calcStat(defender.baseStats.spe, 0, 1.0) : defender.baseStats.spe;
+      const myRanks = abilityInfo.myRanks || {};
+
+      if (moveData.dynamicPower === 'gyro-ball') {
+        if (atkSpe > 0) {
+          const p = Math.max(1, Math.min(150, Math.floor(25 * defSpe / atkSpe)));
+          effectPower = p;
+          dynamicNote = `陀螺球威力${p}（对方速度按无投资估算）`;
+        }
+      } else if (moveData.dynamicPower === 'electro-ball') {
+        const p = getElectroBallPower(atkSpe, defSpe);
+        effectPower = p;
+        dynamicNote = `电球威力${p}（对方速度按无投资估算）`;
+      } else if (moveData.dynamicPower === 'flail') {
+        // 默认展示满HP（威力20），备注最大威力
+        dynamicNote = '满HP威力20，HP极低（≤4%）时威力达200';
+      } else if (moveData.dynamicPower === 'water-spout') {
+        dynamicNote = '满HP威力150，随HP降低而减弱';
+      } else if (moveData.dynamicPower === 'stored-power') {
+        const boostTotal = Object.values(myRanks).filter(v => v > 0).reduce((s, v) => s + v, 0);
+        effectPower = 20 + 20 * boostTotal;
+        dynamicNote = boostTotal > 0
+          ? `辅助力量当前威力${effectPower}（含+${boostTotal}级正面提升）`
+          : '辅助力量（无能力提升时威力20）';
+      } else if (moveData.dynamicPower === 'grass-knot' || moveData.dynamicPower === 'low-kick') {
+        const defWeight = defender.weight || 0;
+        if (defWeight > 0) {
+          effectPower = getWeightBasedPower(defWeight);
+          dynamicNote = `威力${effectPower}（目标体重${defWeight}kg）`;
+        } else {
+          effectPower = 60;
+          dynamicNote = '体重未知，按50kg估算威力60';
+        }
+      } else if (moveData.dynamicPower === 'heavy-slam' || moveData.dynamicPower === 'heat-crash') {
+        const atkWeight = attacker.pokemon.weight || 0;
+        const defWeight = defender.weight || 0;
+        if (atkWeight > 0 && defWeight > 0) {
+          effectPower = getHeavySlamPower(atkWeight, defWeight);
+          dynamicNote = `威力${effectPower}（我方${atkWeight}kg / 对方${defWeight}kg）`;
+        } else {
+          effectPower = 80;
+          dynamicNote = '体重未知，按默认威力80估算';
+        }
+      } else if (moveData.dynamicPower === 'hard-press') {
+        // 硬压：威力 = 目标剩余HP百分比（最高100）
+        // 我方攻击对方：对方HP按满HP估算（最坏情况威力100）
+        effectPower = 100;
+        dynamicNote = '硬压（对方满HP时威力100，随HP降低而减弱）';
+      } else if (moveData.dynamicPower === 'last-respects') {
+        const fainted = abilityInfo.faintedAllies || 0;
+        effectPower = Math.min(300, 50 + 50 * fainted);
+        dynamicNote = fainted > 0
+          ? `扫墓当前威力${effectPower}（${fainted}只队友倒下）`
+          : '扫墓（无队友倒下时威力50，每倒下一只+50，上限300）';
+      } else if (moveData.dynamicPower === 'rage-fist') {
+        const timesHit = abilityInfo.timesHit || 0;
+        effectPower = Math.min(350, 50 + 50 * timesHit);
+        dynamicNote = timesHit > 0
+          ? `愤怒之拳当前威力${effectPower}（被攻击${timesHit}次）`
+          : '愤怒之拳（未被攻击时威力50，每被攻击一次+50，上限350）';
+      }
+    }
+
     // ── 2. 技能标签
     const flags = (typeof getMoveFlags === 'function')
       ? getMoveFlags(moveId, { ...moveData, type: effectMoveType, power: effectPower })
@@ -233,6 +349,28 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
 
     const isPhys  = moveData.category === 'physical';
     let   atkStat = isPhys ? attacker.stats.effective.atk : attacker.stats.effective.spa;
+
+    // 扑击：使用防御代替攻击
+    if (moveData.dynamicPower === 'body-press') {
+      atkStat = attacker.stats.effective.def;
+    }
+    // 欺诈：使用对方攻击代替自身攻击
+    if (moveData.dynamicPower === 'foul-play') {
+      // 对方攻击按无投资估算（最保守）
+      atkStat = (typeof calcStat === 'function')
+        ? calcStat(defender.baseStats.atk, 0, 1.0)
+        : defender.baseStats.atk;
+      dynamicNote = `欺诈（使用对方攻击${atkStat}，按无投资估算）`;
+    }
+    // 光子喷涌/太晶爆发：使用攻击/特攻中较高者
+    if (moveData.dynamicPower === 'photon-geyser') {
+      const myAtk = attacker.stats.effective.atk;
+      const mySpa = attacker.stats.effective.spa;
+      atkStat = Math.max(myAtk, mySpa);
+      if (myAtk >= mySpa) {
+        dynamicNote = `使用攻击（${myAtk}）计算伤害（高于特攻${mySpa}）`;
+      }
+    }
     if (atkAbilEff.atkStatMult) atkStat = Math.floor(atkStat * atkAbilEff.atkStatMult);
 
     // ── 3b. 必定击中要害（alwaysCrit）：无视攻击方负面能力变化
@@ -270,6 +408,26 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
       typeEffOverride = Math.max(baseTypeEff, 2);
     }
 
+    // ── 4b. 固定伤害技能（黑夜魔影/地球上投，等级50固定50伤害）
+    if (moveData.fixedDamage) {
+      const fixedDmg = moveData.fixedDamage;
+      // 仍需检查属性免疫
+      if (baseTypeEff === 0) continue;
+      const moveResults = defConfigs.map(cfg => {
+        const defHP = calcHP(defender.baseStats.hp, cfg.hpSP);
+        const pct   = parseFloat((fixedDmg / defHP * 100).toFixed(1));
+        return { ...cfg, min: fixedDmg, max: fixedDmg, minPct: pct, maxPct: pct,
+                 typeEff: 1, hp: defHP, note: `固定伤害${fixedDmg}` };
+      });
+      results.push({
+        moveId, moveName: moveData.name, moveType: effectMoveType,
+        originalType: null, category: moveData.category, power: 0,
+        fixedDamage: fixedDmg, results: moveResults,
+        ...(dynamicNote && { dynamicNote })
+      });
+      continue;
+    }
+
     // ── 5. 单配置伤害计算函数（含防御方特性）
     const computeDmg = (defCfg, defAbilEff, powerOverride) => {
       if (defAbilEff && defAbilEff.immune) {
@@ -299,6 +457,10 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
 
       const abilMult = (defAbilEff && defAbilEff.mult) ? defAbilEff.mult : 1;
 
+      // 全开猛撞/闪电猛冲：超效时额外×1.3
+      const collisionMult = (moveId === 'collision-course' || moveId === 'electro-drift')
+        && effTypeEff >= 2 ? 1.3 : 1;
+
       const usePower = (powerOverride !== undefined) ? powerOverride : effectPower;
 
       const dmg = calcDamage({
@@ -316,7 +478,7 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
           itemMult,
           screen:          !!hasScreen,
           stabOverride:    atkAbilEff.stabOverride,
-          abilityMult:     abilMult,
+          abilityMult:     abilMult * collisionMult,
           typeEffOverride: typeEffOverride,
           isCrit:          alwaysCrit
         }
@@ -446,6 +608,7 @@ function calcMyMoveDamages(attacker, defender, myMoves, field = {}, atkStatus = 
       entry.conditionalNote = moveData.note;
     }
     if (scenarios.length > 0) entry.scenarios = scenarios;
+    if (dynamicNote)           entry.dynamicNote = dynamicNote;
     results.push(entry);
   }
 
@@ -467,8 +630,9 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
   const oppPossibleAbils   = abilityInfo.atkPossibleAbilities || [];
   const myAbilityId        = abilityInfo.myAbility           || '';
   const atkItem            = abilityInfo.atkItem             || '';
-  const myStatus           = abilityInfo.myStatus            || '';  // 我方异常状态
-  const oppStatus          = abilityInfo.oppStatus           || '';  // 对方异常状态（我方攻击条件）
+  const myStatus           = abilityInfo.myStatus            || '';
+  const oppStatus          = abilityInfo.oppStatus           || '';
+  const atkRanks           = abilityInfo.atkRanks            || {};
 
   const threats = [];
 
@@ -494,6 +658,76 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
 
     let effectMoveType = specialEff.newType  || moveData.type;
     let effectPower    = specialEff.newPower || moveData.power;
+
+    // ── 1b. 动态威力计算（须在 minPower 检查前执行）
+    let dynNoteOpp = '';
+    if (moveData.dynamicPower) {
+      const atkSpe   = (typeof calcStat === 'function')
+        ? calcStat(attacker.baseStats.spe, 0, 1.0) : attacker.baseStats.spe;
+      const defSpe   = defender.stats.effective.spe;
+      const oppRanks = atkRanks;
+
+      if (moveData.dynamicPower === 'gyro-ball') {
+        if (atkSpe > 0) {
+          const p = Math.max(1, Math.min(150, Math.floor(25 * defSpe / atkSpe)));
+          effectPower = p;
+          dynNoteOpp = `陀螺球威力${p}`;
+        } else {
+          effectPower = 150;
+        }
+      } else if (moveData.dynamicPower === 'electro-ball') {
+        const p = getElectroBallPower(atkSpe, defSpe);
+        effectPower = p;
+        dynNoteOpp = `电球威力${p}`;
+      } else if (moveData.dynamicPower === 'water-spout') {
+        // 威力已为150，注明满HP
+        dynNoteOpp = '喷水（满HP威力150）';
+      } else if (moveData.dynamicPower === 'flail') {
+        effectPower = 200;  // 最坏情况：对方HP极低
+        dynNoteOpp = '扑击（对方HP极低时威力200）';
+      } else if (moveData.dynamicPower === 'stored-power') {
+        const boostTotal = Object.values(oppRanks).filter(v => v > 0).reduce((s, v) => s + v, 0);
+        effectPower = 20 + 20 * boostTotal;
+        if (boostTotal > 0) dynNoteOpp = `辅助力量威力${effectPower}`;
+      } else if (moveData.dynamicPower === 'grass-knot' || moveData.dynamicPower === 'low-kick') {
+        const myWeight = defender.pokemon.weight || 0;
+        if (myWeight > 0) {
+          effectPower = getWeightBasedPower(myWeight);
+          dynNoteOpp = `威力${effectPower}（我方体重${myWeight}kg）`;
+        } else {
+          effectPower = 60;
+        }
+      } else if (moveData.dynamicPower === 'heavy-slam' || moveData.dynamicPower === 'heat-crash') {
+        const atkWeight = attacker.weight || 0;
+        const myWeight  = defender.pokemon.weight || 0;
+        if (atkWeight > 0 && myWeight > 0) {
+          effectPower = getHeavySlamPower(atkWeight, myWeight);
+          dynNoteOpp = `威力${effectPower}（对方${atkWeight}kg / 我方${myWeight}kg）`;
+        } else {
+          effectPower = 80;
+        }
+      } else if (moveData.dynamicPower === 'hard-press') {
+        // 硬压：对方攻击我方，按我方满HP估算（威力100）
+        effectPower = 100;
+        dynNoteOpp = '硬压（我方满HP时威力100，随HP降低而减弱）';
+      } else if (moveData.dynamicPower === 'last-respects') {
+        // 最坏情况：对方全队倒下5只，威力300
+        effectPower = 300;
+        dynNoteOpp = '扫墓（最坏情况：5只队友倒下，威力300）';
+      } else if (moveData.dynamicPower === 'rage-fist') {
+        // 最坏情况：被攻击6次，威力350
+        effectPower = 350;
+        dynNoteOpp = '愤怒之拳（最坏情况：被攻击6次，威力350）';
+      } else if (moveData.dynamicPower === 'body-press') {
+        // 扑击：对方使用防御代替攻击，按无投资防御估算
+        dynNoteOpp = '扑击（使用对方防御代替攻击计算）';
+      } else if (moveData.dynamicPower === 'foul-play') {
+        // 欺诈：使用我方攻击代替对方攻击
+        dynNoteOpp = '欺诈（使用我方攻击代替对方攻击计算）';
+      } else if (moveData.dynamicPower === 'photon-geyser') {
+        dynNoteOpp = '光子喷涌（使用对方攻击/特攻中较高者计算）';
+      }
+    }
 
     // 多段命中：用有效最大总威力来判断阈值（避免 25×5 被误过滤）
     let effectiveTotalPower = effectPower;
@@ -563,13 +797,44 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
     const defBase  = isPhys ? attacker.baseStats.atk : attacker.baseStats.spa;
 
     // ── 4. 属性相克
-    const typeEff = (typeof getTypeEffectiveness === 'function')
+    let typeEff = (typeof getTypeEffectiveness === 'function')
       ? getTypeEffectiveness(effectMoveType, defender.pokemon.types) : 1;
+    // 冷冻干燥对水属性固定超效
+    if (moveId === 'freeze-dry' && defender.pokemon.types.includes('water')) {
+      typeEff = Math.max(typeEff, 2);
+    }
     if (typeEff === 0) continue;
+
+    // ── 4b. 固定伤害技能（黑夜魔影/地球上投，等级50固定50伤害）
+    if (moveData.fixedDamage) {
+      const fixedDmg = moveData.fixedDamage;
+      const pct = parseFloat((fixedDmg / myHP * 100).toFixed(1));
+      const fixedResults = atkConfigs.map(cfg => ({
+        ...cfg, min: fixedDmg, max: fixedDmg, minPct: pct, maxPct: pct,
+        typeEff: 1, note: `固定伤害${fixedDmg}`
+      }));
+      threats.push({
+        moveId, moveName: moveData.name, moveType: effectMoveType,
+        originalType: null, category: moveData.category, power: 0,
+        fixedDamage: fixedDmg, typeEff, abilityNote: '', itemScenario: null,
+        results: fixedResults, threatScore: pct
+      });
+      continue;
+    }
 
     // ── 5. 我方防御值
     let myDefStat = isPhys ? myDef : mySpd;
     if (moveId === 'psyshock' || moveId === 'psystrike') myDefStat = myDef;
+    // 必定击中要害：无视防守方正面防御/特防变化
+    if (moveData.alwaysCrit) {
+      const myBaseDefStat = isPhys ? defender.stats.base.def : defender.stats.base.spd;
+      const myBaseDefStatPsyshock = defender.stats.base.def;
+      if (moveId === 'psyshock' || moveId === 'psystrike') {
+        myDefStat = Math.min(myBaseDefStatPsyshock, myDefStat);
+      } else {
+        myDefStat = Math.min(myBaseDefStat, myDefStat);
+      }
+    }
     if (!isPhys && field.weather === 'sandstorm' && defender.pokemon.types.includes('rock'))
       myDefStat = Math.floor(myDefStat * 1.5);
 
@@ -600,14 +865,33 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
 
     const computeOppDmg = (atkCfg, itemDamageMult, itemStatMult, powerOverride) => {
       let oppAtkStat = calcStat(defBase, atkCfg.atkSP, atkCfg.natureMult);
+
+      // 扑击：使用对方防御代替攻击
+      if (moveData.dynamicPower === 'body-press') {
+        oppAtkStat = calcStat(attacker.baseStats.def, atkCfg.atkSP, atkCfg.natureMult);
+      }
+      // 欺诈：使用我方攻击代替对方攻击
+      if (moveData.dynamicPower === 'foul-play') {
+        oppAtkStat = defender.stats.effective.atk;
+      }
+      // 光子喷涌：使用对方攻击/特攻中较高者
+      if (moveData.dynamicPower === 'photon-geyser') {
+        const oppAtk = calcStat(attacker.baseStats.atk, atkCfg.atkSP, atkCfg.natureMult);
+        const oppSpa = calcStat(attacker.baseStats.spa, atkCfg.atkSP, atkCfg.natureMult);
+        oppAtkStat = Math.max(oppAtk, oppSpa);
+      }
+
       if (oppAbilEff.atkStatMult) oppAtkStat = Math.floor(oppAtkStat * oppAbilEff.atkStatMult);
       if (itemStatMult !== 1)     oppAtkStat = Math.floor(oppAtkStat * itemStatMult);
 
       const usePower = (powerOverride !== undefined) ? powerOverride : effectPower;
       const isAlwaysCrit = !!moveData.alwaysCrit;
-      if (isAlwaysCrit) {
-        // 必定急所：无视对方负面能力变化（此处为对方攻击，无负面能力变化场景，直接使用 oppAtkStat）
-      }
+      // 必定击中要害：无视攻击方负面能力变化（对方攻击通常无负面变化，此处保留逻辑完整性）
+      // 防守方正面防御变化已在外层 myDefStat 处理
+
+      // 全开猛撞/闪电猛冲：超效时额外×1.3
+      const collisionMult = (moveId === 'collision-course' || moveId === 'electro-drift')
+        && typeEff >= 2 ? 1.3 : 1;
 
       const dmg = calcDamage({
         attackStat:  oppAtkStat,
@@ -624,7 +908,7 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
           itemMult:     itemDamageMult,
           screen:       !!hasScreen,
           stabOverride: oppAbilEff.stabOverride,
-          abilityMult:  myDefAbilMult,
+          abilityMult:  myDefAbilMult * collisionMult,
           isCrit:       isAlwaysCrit
         }
       });
@@ -732,7 +1016,8 @@ function calcOpponentThreats(defender, attacker, oppMoveIds, field = {}, minPowe
       ...(moveData.hitMin && { hitMin: moveData.hitMin, hitMax: moveData.hitMax }),
       ...(moveData.tripleAxel && { tripleAxel: true }),
       ...(moveData.alwaysCrit && { alwaysCrit: true }),
-      ...(oppCondNote && effectPower === moveData.power && { conditionalNote: oppCondNote })
+      ...(oppCondNote && effectPower === moveData.power && { conditionalNote: oppCondNote }),
+      ...(dynNoteOpp && { dynamicNote: dynNoteOpp })
     });
   }
 

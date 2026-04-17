@@ -1056,6 +1056,18 @@ body {
   padding-left: 8px;
 }
 
+/* 超级进化切换按钮 */
+.mega-badge {
+  background: rgba(255, 180, 40, 0.12);
+  border-color: #f0b030;
+  color: #f0b030;
+}
+.mega-badge.active {
+  background: rgba(255, 180, 40, 0.25);
+  border-color: #f0b030;
+  opacity: 1;
+}
+
 .item-scenario-row {
   margin-top: var(--spacing-xs);
   padding: var(--spacing-xs) var(--spacing-sm);

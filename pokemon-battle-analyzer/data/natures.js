@@ -1,5 +1,5 @@
 // 25种性格数据
-// boost: 加成属性（1.1倍），reduce: 削弱属性（0.9倍），null表示无影响
+// boost: 加成属性（1.1倍），re·uce: 削弱属性（0.9倍），null表示无影响
 const NATURES = {
   hardy:    { name: '勤奋', nameEn: 'Hardy',    boost: null,  reduce: null  },
   lonely:   { name: '孤僻', nameEn: 'Lonely',   boost: 'atk', reduce: 'def' },

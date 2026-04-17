@@ -36,7 +36,11 @@ const AppState = {
     // 场地
     weather: 'none',
     terrain: 'none',
-    trickRoom: false
+    trickRoom: false,
+
+    // 对战中的超级进化形态（不影响队伍配置）
+    myMegaForm: null,
+    oppMegaForm: null
   }
 };
 
@@ -230,14 +234,17 @@ function renderPokemonSlot(index, slot) {
   const spUsed = Object.values(slot.sp).reduce((a, b) => a + b, 0);
   const spRemain = 66 - spUsed;
 
-  // 形态选择器
-  const hasForms = pokemon.forms && Object.keys(pokemon.forms).length > 0;
+  // 形态选择器（超级进化形态在对战中动态切换，此处只显示非Mega形态）
+  const nonMegaForms = pokemon.forms
+    ? Object.entries(pokemon.forms).filter(([fid]) => !fid.startsWith('mega'))
+    : [];
+  const hasForms = nonMegaForms.length > 0;
   const formSelector = hasForms ? `
     <div>
       <label class="form-label">形态</label>
       <select class="form-select" onchange="updateSlotForm(${index}, this.value)">
         <option value="" ${!slot.form ? 'selected' : ''}>普通形态</option>
-        ${Object.entries(pokemon.forms).map(([fid, f]) =>
+        ${nonMegaForms.map(([fid, f]) =>
           `<option value="${fid}" ${slot.form === fid ? 'selected' : ''}>${f.name}</option>`
         ).join('')}
       </select>
@@ -681,8 +688,10 @@ function onMyPokemonChange() {
   }
 
   AppState.battle.mySlotIndex = parseInt(val);
+  AppState.battle.myMegaForm = null;  // 切换宝可梦时重置超级进化状态
   document.getElementById('my-pokemon-info').style.display = 'block';
   renderMyStats();
+  renderMyMegaToggle();
   runAnalysis();
 }
 
@@ -694,7 +703,13 @@ function renderMyStats() {
   const pokemon = POKEMON[slot.speciesId];
   if (!pokemon) return;
 
-  const stats = calcAllStats(pokemon, {
+  const megaFormId = AppState.battle.myMegaForm;
+  const megaForm = (megaFormId && pokemon.forms) ? pokemon.forms[megaFormId] : null;
+  const effectivePokemon = megaForm ? { baseStats: megaForm.baseStats } : pokemon;
+  const effectiveTypes = megaForm ? megaForm.types : pokemon.types;
+  const displayName = megaForm ? megaForm.name : pokemon.name;
+
+  const stats = calcAllStats(effectivePokemon, {
     nature: slot.nature,
     sp: slot.sp,
     rankBoosts: AppState.battle.myRanks,
@@ -704,7 +719,10 @@ function renderMyStats() {
 
   document.getElementById('my-stats-display').innerHTML = `
     <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:4px">
-      ${pokemon.name} · ${NATURES[slot.nature]?.name || '勤奋'} · ${ITEMS[slot.item]?.name || '无道具'}
+      ${displayName} · ${NATURES[slot.nature]?.name || '勤奋'} · ${ITEMS[slot.item]?.name || '无道具'}
+    </div>
+    <div style="margin-bottom:4px;display:flex;gap:4px;flex-wrap:wrap">
+      ${effectiveTypes.map(t => `<span class="type-badge type-${t}-bg" style="font-size:0.72rem">${TYPE_NAMES[t]||t}</span>`).join('')}
     </div>
     <div style="display:flex;gap:var(--spacing-md);flex-wrap:wrap">
       <div><span style="color:var(--text-secondary);font-size:0.8rem">HP </span><strong>${stats.hp}</strong></div>
@@ -713,6 +731,102 @@ function renderMyStats() {
       <div><span style="color:var(--text-secondary);font-size:0.8rem">特攻 </span><strong>${stats.effective.spa}</strong></div>
       <div><span style="color:var(--text-secondary);font-size:0.8rem">特防 </span><strong>${stats.effective.spd}</strong></div>
       <div><span style="color:var(--text-secondary);font-size:0.8rem">速度 </span><strong style="color:var(--accent-blue)">${stats.effective.spe}</strong></div>
+    </div>`;
+}
+
+// =============================================
+// 超级进化切换
+// =============================================
+function renderMyMegaToggle() {
+  const idx = AppState.battle.mySlotIndex;
+  const el = document.getElementById('my-mega-toggle');
+  if (!el || idx === null) return;
+
+  const slot = AppState.currentTeam.pokemon[idx];
+  if (!slot || !slot.speciesId) { el.style.display = 'none'; return; }
+
+  const pokemon = POKEMON[slot.speciesId];
+  if (!pokemon || !pokemon.forms) { el.style.display = 'none'; return; }
+
+  const megaForms = Object.entries(pokemon.forms).filter(([fid]) => fid.startsWith('mega'));
+  if (megaForms.length === 0) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const active = AppState.battle.myMegaForm;
+  const btns = [
+    `<span class="field-badge ${!active ? 'active' : ''}" onclick="toggleMyMegaForm(null)">普通形态</span>`,
+    ...megaForms.map(([fid, f]) =>
+      `<span class="field-badge mega-badge ${active === fid ? 'active' : ''}" onclick="toggleMyMegaForm('${fid}')">${f.name}</span>`
+    )
+  ].join('');
+  el.innerHTML = `
+    <div class="form-group" style="margin-bottom:var(--spacing-md)">
+      <label class="form-label">超级进化</label>
+      <div class="field-badge-row">${btns}</div>
+    </div>`;
+}
+
+function toggleMyMegaForm(formId) {
+  AppState.battle.myMegaForm = formId || null;
+  renderMyMegaToggle();
+  renderMyStats();
+  runAnalysis();
+}
+
+function renderOppMegaToggle(pokemon) {
+  const el = document.getElementById('opp-mega-toggle');
+  if (!el) return;
+
+  if (!pokemon || !pokemon.forms) { el.style.display = 'none'; return; }
+
+  const megaForms = Object.entries(pokemon.forms).filter(([fid]) => fid.startsWith('mega'));
+  if (megaForms.length === 0) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const active = AppState.battle.oppMegaForm;
+  const btns = [
+    `<span class="field-badge ${!active ? 'active' : ''}" onclick="toggleOppMegaForm(null)">普通形态</span>`,
+    ...megaForms.map(([fid, f]) =>
+      `<span class="field-badge mega-badge ${active === fid ? 'active' : ''}" onclick="toggleOppMegaForm('${fid}')">${f.name}</span>`
+    )
+  ].join('');
+  el.innerHTML = `
+    <div class="form-group" style="margin-bottom:var(--spacing-md)">
+      <label class="form-label">超级进化</label>
+      <div class="field-badge-row">${btns}</div>
+    </div>`;
+}
+
+function toggleOppMegaForm(formId) {
+  AppState.battle.oppMegaForm = formId || null;
+  const pokemon = POKEMON[AppState.battle.oppPokemonId];
+  renderOppMegaToggle(pokemon);
+  renderOppStats(pokemon);
+  runAnalysis();
+}
+
+function renderOppStats(pokemon) {
+  if (!pokemon) return;
+  const megaFormId = AppState.battle.oppMegaForm;
+  const megaForm = (megaFormId && pokemon.forms) ? pokemon.forms[megaFormId] : null;
+  const bs = megaForm ? megaForm.baseStats : pokemon.baseStats;
+  const types = megaForm ? megaForm.types : pokemon.types;
+  const displayName = megaForm ? megaForm.name : pokemon.name;
+
+  document.getElementById('opp-stats-display').innerHTML = `
+    <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:4px">
+      ${displayName} · 速度种族值 <strong style="color:var(--accent-blue)">${bs.spe}</strong>
+    </div>
+    <div style="display:flex;gap:var(--spacing-md);flex-wrap:wrap">
+      <div><span style="color:var(--text-secondary);font-size:0.8rem">HP </span><strong>${bs.hp}</strong></div>
+      <div><span style="color:var(--text-secondary);font-size:0.8rem">攻 </span><strong>${bs.atk}</strong></div>
+      <div><span style="color:var(--text-secondary);font-size:0.8rem">防 </span><strong>${bs.def}</strong></div>
+      <div><span style="color:var(--text-secondary);font-size:0.8rem">特攻 </span><strong>${bs.spa}</strong></div>
+      <div><span style="color:var(--text-secondary);font-size:0.8rem">特防 </span><strong>${bs.spd}</strong></div>
+      <div><span style="color:var(--text-secondary);font-size:0.8rem">速度 </span><strong style="color:var(--accent-blue)">${bs.spe}</strong></div>
+    </div>
+    <div style="margin-top:var(--spacing-xs);display:flex;gap:4px">
+      ${types.map(t => `<span class="type-badge type-${t}-bg">${TYPE_NAMES[t]||t}</span>`).join('')}
     </div>`;
 }
 
@@ -762,6 +876,7 @@ function hideOppDropdown() {
 
 function selectOppPokemon(id, name) {
   AppState.battle.oppPokemonId = id;
+  AppState.battle.oppMegaForm = null;  // 切换对方宝可梦时重置超级进化状态
   document.getElementById('opp-search').value = name;
   document.getElementById('opp-dropdown').style.display = 'none';
   document.getElementById('opp-pokemon-info').style.display = 'block';
@@ -769,7 +884,7 @@ function selectOppPokemon(id, name) {
   const pokemon = POKEMON[id];
   if (!pokemon) return;
 
-  // 填充特性下拉（含Mega形态特性）
+  // 填充特性下拉（不含Mega形态专属特性，Mega形态通过超级进化切换控制）
   const abilSel = document.getElementById('opp-ability-select');
   abilSel.innerHTML = '<option value="">未知</option>';
   (pokemon.abilities || []).forEach(a => {
@@ -778,38 +893,9 @@ function selectOppPokemon(id, name) {
     opt.textContent = a.name + (a.isHidden ? '（隐藏特性）' : '');
     abilSel.appendChild(opt);
   });
-  // 加入Mega形态专属特性（如有）
-  if (pokemon.forms) {
-    Object.values(pokemon.forms).forEach(form => {
-      if (form.ability && form.ability.id) {
-        const already = abilSel.querySelector(`option[value="${form.ability.id}"]`);
-        if (!already) {
-          const opt = document.createElement('option');
-          opt.value = form.ability.id;
-          opt.textContent = form.ability.name + '（Mega形态）';
-          abilSel.appendChild(opt);
-        }
-      }
-    });
-  }
 
-  // 显示对方属性
-  document.getElementById('opp-stats-display').innerHTML = `
-    <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:4px">
-      ${pokemon.name} · 速度种族值 <strong style="color:var(--accent-blue)">${pokemon.baseStats.spe}</strong>
-    </div>
-    <div style="display:flex;gap:var(--spacing-md);flex-wrap:wrap">
-      <div><span style="color:var(--text-secondary);font-size:0.8rem">HP </span><strong>${pokemon.baseStats.hp}</strong></div>
-      <div><span style="color:var(--text-secondary);font-size:0.8rem">攻 </span><strong>${pokemon.baseStats.atk}</strong></div>
-      <div><span style="color:var(--text-secondary);font-size:0.8rem">防 </span><strong>${pokemon.baseStats.def}</strong></div>
-      <div><span style="color:var(--text-secondary);font-size:0.8rem">特攻 </span><strong>${pokemon.baseStats.spa}</strong></div>
-      <div><span style="color:var(--text-secondary);font-size:0.8rem">特防 </span><strong>${pokemon.baseStats.spd}</strong></div>
-      <div><span style="color:var(--text-secondary);font-size:0.8rem">速度 </span><strong style="color:var(--accent-blue)">${pokemon.baseStats.spe}</strong></div>
-    </div>
-    <div style="margin-top:var(--spacing-xs);display:flex;gap:4px">
-      ${pokemon.types.map(t => `<span class="type-badge type-${t}-bg">${TYPE_NAMES[t]||t}</span>`).join('')}
-    </div>`;
-
+  renderOppStats(pokemon);
+  renderOppMegaToggle(pokemon);
   runAnalysis();
 }
 
@@ -911,8 +997,31 @@ function runAnalysis() {
     oppScreens: AppState.battle.oppScreens
   };
 
-  // 计算我方属性
-  const myStats = calcAllStats(myPokemon, {
+  // ---- 超级进化形态覆盖 ----
+  const myMegaFormId = AppState.battle.myMegaForm;
+  const myMegaForm   = (myMegaFormId && myPokemon.forms) ? myPokemon.forms[myMegaFormId] : null;
+  const myEffBaseStats = myMegaForm ? myMegaForm.baseStats : myPokemon.baseStats;
+  const myEffTypes     = myMegaForm ? myMegaForm.types     : myPokemon.types;
+  // Mega形态特性固定，非Mega时使用槽位特性
+  const myAbilityId    = myMegaForm ? (myMegaForm.ability?.id || '') : (mySlot.ability || '');
+
+  const oppMegaFormId  = AppState.battle.oppMegaForm;
+  const oppMegaForm    = (oppMegaFormId && oppPokemon.forms) ? oppPokemon.forms[oppMegaFormId] : null;
+  // 对方超级进化：使用Mega种族值/属性/特性；否则使用原始数据
+  const oppEffPokemon  = oppMegaForm
+    ? { ...oppPokemon, baseStats: oppMegaForm.baseStats, types: oppMegaForm.types,
+        weight: (oppPokemon.formWeights && oppPokemon.formWeights[oppMegaFormId]) || oppPokemon.weight }
+    : oppPokemon;
+  // Mega激活时特性固定（不受下拉选择影响）
+  const oppAbilityId   = oppMegaForm
+    ? (oppMegaForm.ability?.id || '')
+    : (document.getElementById('opp-ability-select')?.value || '');
+  const oppPossibleAbils = oppMegaForm
+    ? (oppMegaForm.ability?.id ? [oppMegaForm.ability.id] : [])
+    : (oppPokemon.abilities || []).map(a => a.id);
+
+  // 计算我方属性（使用有效种族值）
+  const myStats = calcAllStats({ baseStats: myEffBaseStats }, {
     nature: mySlot.nature,
     sp: mySlot.sp,
     rankBoosts: AppState.battle.myRanks,
@@ -931,14 +1040,14 @@ function runAnalysis() {
   const oppKnownInfo = {
     nature: document.getElementById('opp-nature-select')?.value || '',
     item: document.getElementById('opp-item-select')?.value || '',
-    ability: document.getElementById('opp-ability-select')?.value || '',
-    pokemonAbilities: oppPokemon.abilities || [],
+    ability: oppAbilityId,
+    pokemonAbilities: oppEffPokemon.abilities || [],
     tailwind: !!AppState.battle.oppTailwind,
     rank: oppSpeRank,
     weather: field.weather
   };
 
-  const speedAnalysis = analyzeSpeed(myEffSpe, oppPokemon, oppKnownInfo, {}, field.trickRoom);
+  const speedAnalysis = analyzeSpeed(myEffSpe, oppEffPokemon, oppKnownInfo, {}, field.trickRoom);
 
   // ---- 2. 我方输出伤害 ----
   const myMoves = mySlot.moves.filter(Boolean);
@@ -948,27 +1057,27 @@ function runAnalysis() {
     poisoned:  AppState.battle.myStatus === 'poison' || AppState.battle.myStatus === 'bad-poison'
   };
 
+  const myEffWeight = myMegaForm
+    ? ((myPokemon.formWeights && myPokemon.formWeights[myMegaFormId]) || myPokemon.weight)
+    : myPokemon.weight;
+
   const myAttacker = {
-    pokemon: myPokemon,
+    pokemon: { ...myPokemon, types: myEffTypes, weight: myEffWeight },
     stats: myStats,
     item: mySlot.item
   };
 
-  // 特性信息
-  const myAbilityId  = mySlot.ability || '';
-  const oppAbilityId = document.getElementById('opp-ability-select')?.value || '';
-  const oppPossibleAbils = (oppPokemon.abilities || []).map(a => a.id);
-
-  const myDamages = calcMyMoveDamages(myAttacker, oppPokemon, myMoves, field, myAtkStatus, {
+  const myDamages = calcMyMoveDamages(myAttacker, oppEffPokemon, myMoves, field, myAtkStatus, {
     myAbility:              myAbilityId,
     defAbility:             oppAbilityId,
     defPossibleAbilities:   oppPossibleAbils,
     oppStatus:              AppState.battle.oppStatus || '',
-    oppHalfHP:              AppState.battle.oppHalfHP || false
+    oppHalfHP:              AppState.battle.oppHalfHP || false,
+    myRanks:                AppState.battle.myRanks
   });
 
   // ---- 3. 对方威胁技能 ----
-  const myStats_forDef = calcAllStats(myPokemon, {
+  const myStats_forDef = calcAllStats({ baseStats: myEffBaseStats }, {
     nature: mySlot.nature,
     sp: mySlot.sp,
     rankBoosts: AppState.battle.myRanks,
@@ -977,26 +1086,27 @@ function runAnalysis() {
   });
 
   const myDefender = {
-    pokemon: myPokemon,
+    pokemon: { ...myPokemon, types: myEffTypes },
     stats: myStats_forDef
   };
 
   const oppItemId = document.getElementById('opp-item-select')?.value || '';
-  const threats = calcOpponentThreats(myDefender, oppPokemon, oppPokemon.moves || [], field, 60, {
+  const threats = calcOpponentThreats(myDefender, oppEffPokemon, oppEffPokemon.moves || [], field, 60, {
     atkAbility:              oppAbilityId,
     atkPossibleAbilities:    oppPossibleAbils,
     myAbility:               myAbilityId,
     atkItem:                 oppItemId,
     myStatus:                AppState.battle.myStatus  || '',
     myHalfHP:                AppState.battle.myHalfHP  || false,
-    oppStatus:               AppState.battle.oppStatus || ''
+    oppStatus:               AppState.battle.oppStatus || '',
+    atkRanks:                AppState.battle.oppRanks
   });
 
   // ---- 渲染结果 ----
   document.getElementById('analysis-results').innerHTML = `
-    ${renderSpeedSection(speedAnalysis, myPokemon, oppPokemon, myEffSpe)}
-    ${renderMyDamageSection(myDamages, myPokemon, oppPokemon)}
-    ${renderThreatSection(threats, oppPokemon, myPokemon, myStats_forDef.hp)}
+    ${renderSpeedSection(speedAnalysis, { ...myPokemon, types: myEffTypes }, oppEffPokemon, myEffSpe)}
+    ${renderMyDamageSection(myDamages, { ...myPokemon, types: myEffTypes, name: myMegaForm ? myMegaForm.name : myPokemon.name }, oppEffPokemon)}
+    ${renderThreatSection(threats, oppEffPokemon, { ...myPokemon, name: myMegaForm ? myMegaForm.name : myPokemon.name }, myStats_forDef.hp)}
   `;
 }
 
@@ -1103,6 +1213,7 @@ function renderMyDamageSection(damages, _myPkm, oppPkm) {
             </span>
             <span style="font-size:0.75rem;color:var(--text-secondary)">${buildPowerLabel(d)}</span>
           </div>
+          ${d.dynamicNote    ? `<div style="font-size:0.7rem;color:var(--text-secondary);margin-top:2px">📐 ${d.dynamicNote}</div>` : ''}
           ${d.conditionalNote ? `<div style="font-size:0.7rem;color:var(--accent-yellow);margin-top:2px">⚡ ${d.conditionalNote}</div>` : ''}
           ${d.alwaysCrit ? `<div style="font-size:0.7rem;color:var(--accent-blue);margin-top:2px">✦ 必定击中要害</div>` : ''}
         </td>
@@ -1143,10 +1254,11 @@ function renderMyDamageSection(damages, _myPkm, oppPkm) {
  * 构建威力标签文本（含多段命中、三旋击等格式）
  */
 function buildPowerLabel(entry) {
-  if (entry.tripleAxel) return '威力20+40+60';
-  if (entry.hitCount)   return `威力${entry.power}×${entry.hitCount}次`;
-  if (entry.hitMin)     return `威力${entry.power}×${entry.hitMin}~${entry.hitMax}次`;
-  if (!entry.power)     return '威力—';
+  if (entry.tripleAxel)  return '威力20+40+60';
+  if (entry.hitCount)    return `威力${entry.power}×${entry.hitCount}次`;
+  if (entry.hitMin)      return `威力${entry.power}×${entry.hitMin}~${entry.hitMax}次`;
+  if (entry.fixedDamage) return `固定${entry.fixedDamage}伤害`;
+  if (!entry.power)      return '威力—';
   return `威力${entry.power}`;
 }
 
@@ -1211,9 +1323,10 @@ function renderThreatSection(threats, oppPkm, myPkm, myHP) {
           <span class="threat-power">${buildPowerLabel(t)}</span>
           ${t.typeEff >= 2 ? `<span class="${getEffClass(t.typeEff)}">${getEffectivenessLabel(t.typeEff).text}</span>` : ''}
           ${isKO ? '<span class="ko-tag guaranteed">可能一击KO</span>' : ''}
+          ${t.dynamicNote ? `<span style="font-size:0.72rem;color:var(--text-secondary)">📐 ${t.dynamicNote}</span>` : ''}
           ${t.abilityNote ? `<span style="font-size:0.72rem;color:var(--accent-yellow)">${t.abilityNote}</span>` : ''}
           ${t.conditionalNote ? `<span style="font-size:0.72rem;color:var(--accent-yellow)">⚡ ${t.conditionalNote}</span>` : ''}
-          ${t.alwaysCrit ? `<span style="font-size:0.72rem;color:var(--accent-blue)">✦必定急所</span>` : ''}
+          ${t.alwaysCrit ? `<span style="font-size:0.72rem;color:var(--accent-blue)">✦必定命中要害</span>` : ''}
         </div>
         <div class="threat-dmg-grid">
           ${t.results.map(r => `
